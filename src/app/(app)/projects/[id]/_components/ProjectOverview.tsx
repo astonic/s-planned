@@ -10,7 +10,7 @@ import {
   Badge,
   ProgressBar,
 } from '@fluentui/react-components'
-import type { ProjectStatus, ProjectPhase } from '@prisma/client'
+import type { ProjectStatus } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,12 +22,8 @@ export interface FocusAreaStat {
   pct: number
 }
 
-export interface PhaseCounts {
-  pre_commissioning: number
-  commissioning: number
-  ramp_up: number
-  handover: number
-}
+// Dynamic: keys are phase name strings from the template (e.g. "Pre-Commissioning")
+export type PhaseCounts = Record<string, number>
 
 export interface RAIDSummary {
   total: number
@@ -325,12 +321,7 @@ function formatDate(date: Date | null): string {
   })
 }
 
-const PHASE_LABELS: Record<keyof PhaseCounts, string> = {
-  pre_commissioning: 'Pre-Commissioning',
-  commissioning: 'Commissioning',
-  ramp_up: 'Ramp-Up',
-  handover: 'Handover',
-}
+// Phase labels come from the template — no hardcoded mapping needed
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
@@ -491,17 +482,21 @@ export function ProjectOverview({
         <Text size={400} weight="semibold" className={styles.sectionTitle} block>
           Phase Breakdown
         </Text>
-        <div className={styles.phaseGrid}>
-          {(Object.keys(PHASE_LABELS) as (keyof PhaseCounts)[]).map((phase) => (
-            <Card key={phase}>
-              <div className={styles.phaseCard}>
-                <Text className={styles.phaseLabel}>{PHASE_LABELS[phase]}</Text>
-                <Text className={styles.phaseCount}>{byPhase[phase]}</Text>
-                <Text className={styles.phaseSubtext}>deliverables</Text>
-              </div>
-            </Card>
-          ))}
-        </div>
+        {Object.keys(byPhase).length === 0 ? (
+          <Text size={200} style={{ color: 'var(--colorNeutralForeground3)' }}>No phases defined in this project.</Text>
+        ) : (
+          <div className={styles.phaseGrid} style={{ gridTemplateColumns: `repeat(${Math.min(Object.keys(byPhase).length, 4)}, 1fr)` }}>
+            {Object.entries(byPhase).map(([phase, count]) => (
+              <Card key={phase}>
+                <div className={styles.phaseCard}>
+                  <Text className={styles.phaseLabel}>{phase}</Text>
+                  <Text className={styles.phaseCount}>{count}</Text>
+                  <Text className={styles.phaseSubtext}>deliverables</Text>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── RAID Summary ─────────────────────────────────────────────────────── */}

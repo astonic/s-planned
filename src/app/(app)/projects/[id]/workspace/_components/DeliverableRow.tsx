@@ -10,7 +10,7 @@ import {
   Select,
   Spinner,
 } from '@fluentui/react-components'
-import type { DeliverableExecution, DeliverableStatus, ProjectPhase } from '@prisma/client'
+import type { DeliverableExecution, DeliverableStatus } from '@prisma/client'
 import { updateDeliverableStatus } from '@/lib/actions/projects'
 
 const useStyles = makeStyles({
@@ -58,18 +58,14 @@ const useStyles = makeStyles({
   },
 })
 
-const PHASE_COLORS = {
-  pre_commissioning: 'informative',
-  commissioning: 'warning',
-  ramp_up: 'success',
-  handover: 'severe',
-} as const satisfies Record<ProjectPhase, 'informative' | 'warning' | 'success' | 'severe'>
+// Phase badge colour rotates through a palette — phases are free-text strings
+const PHASE_PALETTE: Array<'brand' | 'informative' | 'success' | 'warning' | 'severe' | 'danger'> =
+  ['informative', 'warning', 'success', 'severe', 'brand', 'danger']
 
-const PHASE_LABELS: Record<ProjectPhase, string> = {
-  pre_commissioning: 'Pre-Comm',
-  commissioning: 'Commissioning',
-  ramp_up: 'Ramp Up',
-  handover: 'Handover',
+function phaseColor(phase: string): 'brand' | 'informative' | 'success' | 'warning' | 'severe' | 'danger' {
+  let hash = 0
+  for (let i = 0; i < phase.length; i++) hash = (hash * 31 + phase.charCodeAt(i)) >>> 0
+  return PHASE_PALETTE[hash % PHASE_PALETTE.length]
 }
 
 const STATUS_OPTIONS: { value: DeliverableStatus; label: string }[] = [
@@ -111,10 +107,10 @@ export function DeliverableRow({ deliverable, projectId }: Props) {
         <Badge
           className={styles.phaseBadge}
           appearance="tint"
-          color={PHASE_COLORS[deliverable.phase]}
+          color={phaseColor(deliverable.phase)}
           size="small"
         >
-          {PHASE_LABELS[deliverable.phase]}
+          {deliverable.phase}
         </Badge>
       )}
 

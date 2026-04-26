@@ -164,12 +164,9 @@ model SubSection {
   @@map("sub_sections")
 }
 
-enum ProjectPhase {
-  pre_commissioning
-  commissioning
-  ramp_up
-  handover
-}
+// Phase is now a free-text String on each deliverable — each template
+// defines its own phase names (e.g. Mining uses "Pre-Commissioning",
+// Healthcare uses "Pre-Go-Live"). The enum is removed.
 
 model DeliverableTemplate {
   id                String   @id @default(uuid())
@@ -177,7 +174,7 @@ model DeliverableTemplate {
   code              String
   name              String
   description       String?
-  phase             ProjectPhase?
+  phase             String?
   domain            String?
   estimatedDuration Int?
 
@@ -331,7 +328,7 @@ model DeliverableExecution {
   code        String
   description String?
   status      DeliverableStatus @default(planned)
-  phase       ProjectPhase?
+  phase       String?
   domain      String?
 
   startDate  DateTime?

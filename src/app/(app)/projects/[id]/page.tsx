@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectOverview } from './_components/ProjectOverview'
 import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
-import type { ProjectPhase } from '@prisma/client'
 
 interface Props {
   params: { id: string }
@@ -66,16 +65,11 @@ export default async function ProjectDetailPage({ params }: Props) {
     return { name: fa.name, code: fa.code, total, closed, pct }
   })
 
-  const PHASES: ProjectPhase[] = ['pre_commissioning', 'commissioning', 'ramp_up', 'handover']
-  const byPhase: PhaseCounts = {
-    pre_commissioning: 0,
-    commissioning: 0,
-    ramp_up: 0,
-    handover: 0,
-  }
+  // Build byPhase dynamically from actual deliverable phase strings
+  const byPhase: PhaseCounts = {}
   for (const d of allDeliverables) {
-    if (d.phase && PHASES.includes(d.phase)) {
-      byPhase[d.phase]++
+    if (d.phase) {
+      byPhase[d.phase] = (byPhase[d.phase] ?? 0) + 1
     }
   }
 

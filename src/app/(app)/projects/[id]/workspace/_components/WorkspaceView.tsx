@@ -27,7 +27,6 @@ import type {
   SubSectionExecution,
   DeliverableExecution,
   DeliverableStatus,
-  ProjectPhase,
 } from '@prisma/client'
 import { DeliverableRow } from './DeliverableRow'
 
@@ -134,18 +133,13 @@ const STATUS_LABELS: Record<DeliverableStatus, string> = {
   closed: 'Closed',
 }
 
-const PHASE_COLORS: Record<ProjectPhase, 'informative' | 'warning' | 'success' | 'severe'> = {
-  pre_commissioning: 'informative',
-  commissioning: 'warning',
-  ramp_up: 'success',
-  handover: 'severe',
-}
+const PHASE_PALETTE: Array<'brand' | 'informative' | 'success' | 'warning' | 'severe'> =
+  ['informative', 'warning', 'success', 'severe', 'brand']
 
-const PHASE_LABELS: Record<ProjectPhase, string> = {
-  pre_commissioning: 'Pre-Comm',
-  commissioning: 'Commissioning',
-  ramp_up: 'Ramp Up',
-  handover: 'Handover',
+function phaseColor(phase: string): 'brand' | 'informative' | 'success' | 'warning' | 'severe' {
+  let hash = 0
+  for (let i = 0; i < phase.length; i++) hash = (hash * 31 + phase.charCodeAt(i)) >>> 0
+  return PHASE_PALETTE[hash % PHASE_PALETTE.length]
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -329,10 +323,10 @@ export function WorkspaceView({ project }: Props) {
                       {d.phase ? (
                         <Badge
                           appearance="tint"
-                          color={PHASE_COLORS[d.phase]}
+                          color={phaseColor(d.phase)}
                           size="small"
                         >
-                          {PHASE_LABELS[d.phase]}
+                          {d.phase}
                         </Badge>
                       ) : (
                         <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>

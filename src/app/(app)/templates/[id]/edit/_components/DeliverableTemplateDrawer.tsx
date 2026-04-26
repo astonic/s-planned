@@ -33,7 +33,7 @@ import {
   addEvidenceRequirement,
   deleteEvidenceRequirement,
 } from '@/lib/actions/templates'
-import type { DeliverableTemplate, ProjectPhase } from '@/types/templates'
+import type { DeliverableTemplate } from '@/types/templates'
 
 const useStyles = makeStyles({
   body: {
@@ -90,12 +90,6 @@ const useStyles = makeStyles({
   },
 })
 
-const PHASE_OPTIONS: { value: ProjectPhase; label: string }[] = [
-  { value: 'pre_commissioning', label: 'Pre-Commissioning' },
-  { value: 'commissioning', label: 'Commissioning' },
-  { value: 'ramp_up', label: 'Ramp-Up' },
-  { value: 'handover', label: 'Handover' },
-]
 
 interface Props {
   deliverable: DeliverableTemplate
@@ -235,15 +229,12 @@ export function DeliverableTemplateDrawer({ deliverable, templateId, open, onClo
             <Field label="Code" required>
               <Input value={code} onChange={(_, d) => setCode(d.value)} />
             </Field>
-            <Field label="Phase">
-              <Select value={phase} onChange={(_, d) => setPhase(d.value)}>
-                <option value="">None</option>
-                {PHASE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </Select>
+            <Field label="Phase" hint="e.g. Pre-Commissioning, Commissioning, Ramp-Up">
+              <Input
+                value={phase}
+                onChange={(_, d) => setPhase(d.value)}
+                placeholder="Enter phase name"
+              />
             </Field>
           </div>
 

@@ -1,10 +1,7 @@
 // Shared types for the template editor — mirroring the Prisma schema shape
 
-export type ProjectPhase =
-  | 'pre_commissioning'
-  | 'commissioning'
-  | 'ramp_up'
-  | 'handover'
+// Phase is a free-text string — each template defines its own phase names
+export type ProjectPhase = string
 
 export interface AcceptanceCriteriaItem {
   id: string
@@ -25,7 +22,7 @@ export interface DeliverableTemplate {
   code: string
   name: string
   description: string | null
-  phase: ProjectPhase | null
+  phase: string | null
   domain: string | null
   estimatedDuration: number | null
   acceptanceCriteria: AcceptanceCriteriaItem[]

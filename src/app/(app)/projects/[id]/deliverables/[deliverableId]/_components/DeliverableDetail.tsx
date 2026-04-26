@@ -22,7 +22,6 @@ import {
 import type {
   DeliverableExecution,
   DeliverableStatus,
-  ProjectPhase,
   RAIDType,
   RAIDSeverity,
   RAIDStatus,
@@ -175,18 +174,13 @@ const STATUS_BADGE_COLORS: Record<DeliverableStatus, 'informative' | 'brand' | '
   closed: 'success',
 }
 
-const PHASE_COLORS: Record<ProjectPhase, 'informative' | 'warning' | 'success' | 'severe'> = {
-  pre_commissioning: 'informative',
-  commissioning: 'warning',
-  ramp_up: 'success',
-  handover: 'severe',
-}
+const PHASE_PALETTE: Array<'brand' | 'informative' | 'success' | 'warning' | 'severe'> =
+  ['informative', 'warning', 'success', 'severe', 'brand']
 
-const PHASE_LABELS: Record<ProjectPhase, string> = {
-  pre_commissioning: 'Pre-Commissioning',
-  commissioning: 'Commissioning',
-  ramp_up: 'Ramp Up',
-  handover: 'Handover',
+function phaseColor(phase: string): 'brand' | 'informative' | 'success' | 'warning' | 'severe' {
+  let hash = 0
+  for (let i = 0; i < phase.length; i++) hash = (hash * 31 + phase.charCodeAt(i)) >>> 0
+  return PHASE_PALETTE[hash % PHASE_PALETTE.length]
 }
 
 // ── RAID badge maps ───────────────────────────────────────────────────────────
@@ -611,8 +605,8 @@ export function DeliverableDetail({
         <div className={styles.sidebarRow}>
           <Text className={styles.sidebarLabel}>Phase</Text>
           {deliverable.phase ? (
-            <Badge appearance="tint" color={PHASE_COLORS[deliverable.phase]}>
-              {PHASE_LABELS[deliverable.phase]}
+            <Badge appearance="tint" color={phaseColor(deliverable.phase)}>
+              {deliverable.phase}
             </Badge>
           ) : (
             <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
