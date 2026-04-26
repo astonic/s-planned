@@ -1,0 +1,10 @@
+node_modules/
+.next/
+dist/
+.git/
+*.log
+prisma/migrations/  # let Claude read schema but not all migration history
+coverage/
+.nyc_output/
+uploads/
+*.lock

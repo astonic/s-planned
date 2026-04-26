@@ -1,0 +1,28 @@
+{
+  "model": "claude-sonnet-4-6",
+  "dangerouslySkipPermissions": true,
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Bash(npm run *:*)",
+      "Bash(npx prisma *:*)",
+      "Bash(docker compose up*:*)",
+      "Bash(docker compose down*:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(rm -rf *:*)",
+      "Bash(git push*:*)",
+      "Bash(git push --force*:*)",
+      "Bash(docker compose down -v*:*)",
+      "Write(./prisma/migrations/*:*)"
+    ]
+  }
+}
