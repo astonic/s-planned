@@ -77,6 +77,7 @@ model Organization {
   logoUrl     String?
 
   memberships OrganizationMembership[]
+  settings    OrganizationSettings?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -106,6 +107,43 @@ model OrganizationMembership {
   @@unique([organizationId, userId])
   @@index([organizationId])
   @@map("organization_memberships")
+}
+
+// ── Settings (Phase 10) ───────────────────────────────────────────────────────
+
+model OrganizationSettings {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  // General
+  description    String?      @db.Text
+  timezone       String       @default("UTC")
+  dateFormat     String       @default("DD/MM/YYYY")
+  // Storage
+  storageProvider String      @default("local")
+  storageEndpoint String?
+  storageAccessKey String?
+  storageSecretKey String?
+  storageBucket   String?
+  // SMTP Email
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPassword    String?
+  smtpFrom        String?
+  smtpFromName    String?
+  smtpSecure      Boolean     @default(true)
+  // Notifications
+  notifyEmail     Boolean     @default(true)
+  notifyReminders Boolean     @default(true)
+  notifyRaid      Boolean     @default(true)
+  notifyDigest    Boolean     @default(false)
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("organization_settings")
 }
 
 // ── Template Engine (Phase 2) ─────────────────────────────────────────────────
