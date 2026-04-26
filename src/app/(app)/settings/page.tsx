@@ -74,6 +74,16 @@ export default async function SettingsPage() {
             sentAt: inv.sentAt,
             expiresAt: inv.expiresAt,
           }))}
+          ssoEnabled={s?.ssoEnabled}
+          ssoProtocol={s?.ssoProtocol}
+          samlEnabled={s?.samlEnabled}
+          samlEntryPoint={s?.samlEntryPoint}
+          samlIssuer={s?.samlIssuer}
+          oidcEnabled={s?.oidcEnabled}
+          oidcClientId={s?.oidcClientId}
+          oidcDiscoveryUrl={s?.oidcDiscoveryUrl}
+          ssoAutoProvision={s?.ssoAutoProvision}
+          ssoDefaultRole={s?.ssoDefaultRole}
         />
       </div>
     </>

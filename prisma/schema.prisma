@@ -138,6 +138,32 @@ model OrganizationSettings {
   notifyReminders Boolean     @default(true)
   notifyRaid      Boolean     @default(true)
   notifyDigest    Boolean     @default(false)
+  // SSO / Identity Provider (Phase 12)
+  ssoEnabled      Boolean     @default(false)
+  ssoProtocol     String?     // "saml" or "oidc"
+  ssoAutoProvision Boolean    @default(false)
+  ssoDefaultRole  String      @default("member") // "admin", "member", "viewer"
+  // SAML Settings
+  samlEnabled     Boolean     @default(false)
+  samlEntryPoint  String?     // IdP login URL
+  samlIssuer      String?     // SP EntityID
+  samlCertificate String?     @db.Text // IdP public certificate
+  samlPrivateKey  String?     @db.Text // SP private key (for signing)
+  samlNameIdFormat String?
+  samlNameIdField String?     // SAML attribute for user ID
+  samlEmailField  String?     // SAML attribute for email
+  samlNameField   String?     // SAML attribute for name
+  // OIDC Settings
+  oidcEnabled     Boolean     @default(false)
+  oidcClientId    String?
+  oidcClientSecret String?    @db.Text
+  oidcDiscoveryUrl String?    // Auto-discovery endpoint
+  oidcIssuer      String?
+  oidcAuthorizationUrl String?
+  oidcTokenUrl    String?
+  oidcUserinfoUrl String?
+  oidcJwksUrl     String?
+  oidcScope       String      @default("openid profile email") // Space-separated scopes
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 

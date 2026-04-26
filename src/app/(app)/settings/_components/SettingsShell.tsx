@@ -11,6 +11,7 @@ import { SmtpSettingsForm } from './SmtpSettingsForm'
 import { NotificationSettingsForm } from './NotificationSettingsForm'
 import { UsersSettingsPanel, type MemberRow } from './UsersSettingsPanel'
 import { type PendingInvite } from './PendingInvitesTable'
+import { IdentitySettingsForm } from './IdentitySettingsForm'
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -22,7 +23,7 @@ const useStyles = makeStyles({
   },
 })
 
-type TabId = 'general' | 'storage' | 'email' | 'notifications' | 'users'
+type TabId = 'general' | 'storage' | 'email' | 'notifications' | 'identity' | 'users'
 
 interface SettingsData {
   orgName: string
@@ -45,6 +46,16 @@ interface SettingsData {
   notifyDigest: boolean
   members: MemberRow[]
   pendingInvites: PendingInvite[]
+  ssoEnabled?: boolean
+  ssoProtocol?: string | null
+  samlEnabled?: boolean
+  samlEntryPoint?: string | null
+  samlIssuer?: string | null
+  oidcEnabled?: boolean
+  oidcClientId?: string | null
+  oidcDiscoveryUrl?: string | null
+  ssoAutoProvision?: boolean
+  ssoDefaultRole?: string | null
 }
 
 export function SettingsShell(props: SettingsData) {
@@ -61,6 +72,7 @@ export function SettingsShell(props: SettingsData) {
         <Tab value="storage">Storage</Tab>
         <Tab value="email">Email (SMTP)</Tab>
         <Tab value="notifications">Notifications</Tab>
+        <Tab value="identity">Identity</Tab>
         <Tab value="users">Users</Tab>
       </TabList>
 
@@ -118,6 +130,26 @@ export function SettingsShell(props: SettingsData) {
               notifyRaid={props.notifyRaid}
               notifyDigest={props.notifyDigest}
             />
+          </>
+        )}
+        {tab === 'identity' && (
+          <>
+            <Text size={400} weight="semibold" block className={styles.sectionTitle}>Identity & SSO</Text>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalL }} block>
+              Configure single sign-on via SAML or OpenID Connect for enterprise authentication.
+            </Text>
+            <IdentitySettingsForm data={{
+              ssoEnabled: props.ssoEnabled,
+              ssoProtocol: props.ssoProtocol,
+              samlEnabled: props.samlEnabled,
+              samlEntryPoint: props.samlEntryPoint,
+              samlIssuer: props.samlIssuer,
+              oidcEnabled: props.oidcEnabled,
+              oidcClientId: props.oidcClientId,
+              oidcDiscoveryUrl: props.oidcDiscoveryUrl,
+              ssoAutoProvision: props.ssoAutoProvision,
+              ssoDefaultRole: props.ssoDefaultRole,
+            }} />
           </>
         )}
         {tab === 'users' && (
