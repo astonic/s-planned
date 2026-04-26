@@ -27,6 +27,7 @@ type TabId = 'general' | 'storage' | 'email' | 'notifications' | 'identity' | 'u
 
 interface SettingsData {
   orgName: string
+  logoUrl?: string | null
   description?: string | null
   timezone: string
   dateFormat: string
@@ -82,6 +83,7 @@ export function SettingsShell(props: SettingsData) {
             <Text size={400} weight="semibold" block className={styles.sectionTitle}>General Settings</Text>
             <GeneralSettingsForm
               orgName={props.orgName}
+              logoUrl={props.logoUrl}
               description={props.description}
               timezone={props.timezone}
               dateFormat={props.dateFormat}

@@ -6,6 +6,7 @@ import {
 } from '@fluentui/react-components'
 import { CheckmarkCircleRegular, DismissCircleRegular } from '@fluentui/react-icons'
 import { saveGeneralSettings } from '@/lib/actions/settings'
+import { OrgLogoUpload } from './OrgLogoUpload'
 
 const TIMEZONES = [
   'UTC', 'Africa/Johannesburg', 'America/New_York', 'America/Chicago',
@@ -27,12 +28,13 @@ const useStyles = makeStyles({
 
 interface Props {
   orgName: string
+  logoUrl?: string | null
   description?: string | null
   timezone: string
   dateFormat: string
 }
 
-export function GeneralSettingsForm({ orgName, description, timezone, dateFormat }: Props) {
+export function GeneralSettingsForm({ orgName, logoUrl, description, timezone, dateFormat }: Props) {
   const styles = useStyles()
   const [name, setName] = useState(orgName)
   const [desc, setDesc] = useState(description ?? '')
@@ -51,6 +53,8 @@ export function GeneralSettingsForm({ orgName, description, timezone, dateFormat
 
   return (
     <div className={styles.form}>
+      <OrgLogoUpload orgName={orgName} currentLogoUrl={logoUrl} />
+      <Divider />
       <Field label="Organization Name" required>
         <Input value={name} onChange={(_, d) => setName(d.value)} />
       </Field>

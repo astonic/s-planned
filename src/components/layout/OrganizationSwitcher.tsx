@@ -37,9 +37,10 @@ const useStyles = makeStyles({
 interface Props {
   currentOrgName: string
   currentOrgSlug: string
+  currentOrgLogoUrl?: string | null
 }
 
-export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentOrgSlug }: Props) {
+export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentOrgSlug, currentOrgLogoUrl }: Props) {
   const styles = useStyles()
   const router = useRouter()
   const [orgs, setOrgs] = useState<UserOrganization[]>([])
@@ -94,7 +95,16 @@ export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentO
               disabled={org.isCurrentOrg}
             >
               <div className={styles.optionContent}>
-                <Avatar name={org.name} size={24} color="colorful" />
+                {org.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={org.logoUrl}
+                    alt={org.name}
+                    style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 2 }}
+                  />
+                ) : (
+                  <Avatar name={org.name} size={24} color="colorful" />
+                )}
                 <div className={styles.orgLabel}>
                   <Text size={200}>{org.name}</Text>
                   <Text size={100} className={styles.roleBadge}>{org.role}</Text>

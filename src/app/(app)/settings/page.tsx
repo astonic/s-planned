@@ -42,6 +42,7 @@ export default async function SettingsPage() {
       <div style={{ padding: '24px' }}>
         <SettingsShell
           orgName={org.name}
+          logoUrl={org.logoUrl}
           description={s?.description}
           timezone={s?.timezone ?? 'UTC'}
           dateFormat={s?.dateFormat ?? 'DD/MM/YYYY'}

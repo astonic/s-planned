@@ -132,10 +132,11 @@ interface SidebarProps {
   userName: string
   orgName: string
   orgSlug: string
+  orgLogoUrl?: string | null
   avatarUrl?: string | null
 }
 
-export function Sidebar({ userName, orgName, orgSlug, avatarUrl }: SidebarProps) {
+export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: SidebarProps) {
   const styles = useStyles()
   const pathname = usePathname()
   const { state, toggle } = useSidebar()
@@ -211,7 +212,17 @@ export function Sidebar({ userName, orgName, orgSlug, avatarUrl }: SidebarProps)
         {!isCollapsed && (
           <div className={styles.footerText}>
             <Text size={200} weight="semibold" className={styles.userName}>{userName}</Text>
-            <OrganizationSwitcher currentOrgName={orgName} currentOrgSlug={orgSlug} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS, marginTop: '4px' }}>
+              {orgLogoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={orgLogoUrl}
+                  alt={orgName}
+                  style={{ width: 16, height: 16, objectFit: 'contain' }}
+                />
+              )}
+              <OrganizationSwitcher currentOrgName={orgName} currentOrgSlug={orgSlug} currentOrgLogoUrl={orgLogoUrl} />
+            </div>
           </div>
         )}
       </div>

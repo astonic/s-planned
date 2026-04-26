@@ -12,16 +12,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const org = session.currentOrganizationId
     ? await prisma.organization.findUnique({
         where: { id: session.currentOrganizationId },
-        select: { name: true, slug: true },
+        select: { name: true, slug: true, logoUrl: true },
       })
     : null
 
   const orgName = org?.name ?? 'My Organization'
   const orgSlug = org?.slug ?? 'org'
+  const orgLogoUrl = org?.logoUrl ?? null
 
   return (
     <FluentWrapper>
-      <AppShell session={session} orgName={orgName} orgSlug={orgSlug}>
+      <AppShell session={session} orgName={orgName} orgSlug={orgSlug} orgLogoUrl={orgLogoUrl}>
         <main style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
           {children}
         </main>
