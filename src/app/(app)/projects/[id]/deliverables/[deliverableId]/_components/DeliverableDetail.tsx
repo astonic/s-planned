@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   makeStyles,
@@ -107,6 +107,10 @@ const useStyles = makeStyles({
   },
   activitySearch: {
     width: '320px',
+  },
+  activityLoadMore: {
+    display: 'flex',
+    justifyContent: 'center',
   },
   activityPlaceholder: { color: tokens.colorNeutralForeground3, fontStyle: 'italic', padding: tokens.spacingVerticalM },
   raidHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -282,6 +286,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
+  const [visibleActivityCount, setVisibleActivityCount] = useState(10)
 
   const activityTypes = useMemo(
     () => Array.from(new Set(auditEvents.map((event) => event.eventType))).sort(),
@@ -300,6 +305,15 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
       )
     })
   }, [auditEvents, activityQuery, activityType])
+
+  useEffect(() => {
+    setVisibleActivityCount(10)
+  }, [activityQuery, activityType])
+
+  const visibleAuditEvents = useMemo(
+    () => filteredAuditEvents.slice(0, visibleActivityCount),
+    [filteredAuditEvents, visibleActivityCount]
+  )
 
   return (
     <div className={styles.layout}>
@@ -406,7 +420,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                   <Text className={styles.activityPlaceholder}>No activity matches the current filters.</Text>
                 ) : (
                   <div className={styles.activityList}>
-                    {filteredAuditEvents.map((event) => (
+                    {visibleAuditEvents.map((event) => (
                       <div key={event.id} className={styles.activityRow}>
                         <div className={styles.activityMeta}>
                           <Text size={200}>{event.actorName}</Text>
@@ -426,6 +440,16 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                         </Text>
                       </div>
                     ))}
+                    {filteredAuditEvents.length > visibleActivityCount && (
+                      <div className={styles.activityLoadMore}>
+                        <Button
+                          appearance="subtle"
+                          onClick={() => setVisibleActivityCount((prev) => prev + 10)}
+                        >
+                          Load more
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>

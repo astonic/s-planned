@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   makeStyles,
   tokens,
@@ -12,6 +12,7 @@ import {
   ProgressBar,
   Input,
   Select,
+  Button,
 } from '@fluentui/react-components'
 import type { ProjectStatus, ProjectPhase } from '@prisma/client'
 
@@ -320,6 +321,10 @@ const useStyles = makeStyles({
   activitySearch: {
     width: '320px',
   },
+  activityLoadMore: {
+    display: 'flex',
+    justifyContent: 'center',
+  },
   activityRow: {
     display: 'flex',
     flexDirection: 'column',
@@ -435,6 +440,7 @@ export function ProjectOverview({
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
+  const [visibleActivityCount, setVisibleActivityCount] = useState(10)
 
   const activityTypes = useMemo(
     () => Array.from(new Set(recentActivity.map((event) => event.eventType))).sort(),
@@ -453,6 +459,15 @@ export function ProjectOverview({
       )
     })
   }, [recentActivity, activityQuery, activityType])
+
+  useEffect(() => {
+    setVisibleActivityCount(10)
+  }, [activityQuery, activityType])
+
+  const visibleRecentActivity = useMemo(
+    () => filteredRecentActivity.slice(0, visibleActivityCount),
+    [filteredRecentActivity, visibleActivityCount]
+  )
 
   return (
     <div className={styles.root}>
@@ -666,7 +681,7 @@ export function ProjectOverview({
                 <Text className={styles.activityEmpty}>No activity matches the current filters.</Text>
               ) : (
                 <div className={styles.activityList}>
-                  {filteredRecentActivity.map((event) => (
+                  {visibleRecentActivity.map((event) => (
                     <div key={event.id} className={styles.activityRow}>
                       <div className={styles.activityMeta}>
                         <Text size={200}>{event.actorName}</Text>
@@ -686,6 +701,16 @@ export function ProjectOverview({
                       </Text>
                     </div>
                   ))}
+                  {filteredRecentActivity.length > visibleActivityCount && (
+                    <div className={styles.activityLoadMore}>
+                      <Button
+                        appearance="subtle"
+                        onClick={() => setVisibleActivityCount((prev) => prev + 10)}
+                      >
+                        Load more
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
