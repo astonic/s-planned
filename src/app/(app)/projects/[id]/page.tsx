@@ -1,12 +1,10 @@
 import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import Link from 'next/link'
-import { Button } from '@fluentui/react-components'
-import { EditRegular, OpenRegular } from '@fluentui/react-icons'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectOverview } from './_components/ProjectOverview'
+import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
 import type { ProjectPhase } from '@prisma/client'
 
@@ -99,23 +97,6 @@ export default async function ProjectDetailPage({ params }: Props) {
     },
   }
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
-
-  const actions = (
-    <>
-      <Link href={`/projects/${project.id}/edit`} style={{ textDecoration: 'none' }}>
-        <Button appearance="secondary" icon={<EditRegular />}>
-          Edit
-        </Button>
-      </Link>
-      <Link href={`/projects/${project.id}/workspace`} style={{ textDecoration: 'none' }}>
-        <Button appearance="primary" icon={<OpenRegular />}>
-          Workspace
-        </Button>
-      </Link>
-    </>
-  )
-
   return (
     <>
       <PageHeader
@@ -124,7 +105,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           { label: 'Projects', href: '/projects' },
           { label: project.name },
         ]}
-        actions={actions}
+        actions={<ProjectActions projectId={params.id} />}
       />
       <ProjectOverview
         projectId={params.id}

@@ -1,12 +1,10 @@
 import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import Link from 'next/link'
-import { Button } from '@fluentui/react-components'
-import { EditRegular, CopyRegular } from '@fluentui/react-icons'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { TemplateViewer } from './_components/TemplateViewer'
+import { TemplateActions } from './_components/TemplateActions'
 
 interface Props {
   params: { id: string }
@@ -17,11 +15,7 @@ export default async function TemplateDetailPage({ params }: Props) {
   if (!session?.currentOrganizationId) notFound()
 
   const template = await prisma.template.findFirst({
-    where: {
-      id: params.id,
-      organizationId: session.currentOrganizationId,
-      isArchived: false,
-    },
+    where: { id: params.id, organizationId: session.currentOrganizationId, isArchived: false },
     include: {
       focusAreas: {
         orderBy: { order: 'asc' },
@@ -30,10 +24,7 @@ export default async function TemplateDetailPage({ params }: Props) {
             orderBy: { order: 'asc' },
             include: {
               deliverables: {
-                include: {
-                  acceptanceCriteria: true,
-                  evidenceRequirements: true,
-                },
+                include: { acceptanceCriteria: true, evidenceRequirements: true },
               },
             },
           },
@@ -44,20 +35,6 @@ export default async function TemplateDetailPage({ params }: Props) {
 
   if (!template) notFound()
 
-  const actions = (
-    <>
-      <Link href={`/templates/${template.id}/edit`} style={{ textDecoration: 'none' }}>
-        <Button appearance="secondary" icon={<EditRegular />}>Edit</Button>
-      </Link>
-      <Link href={`/templates/${template.id}/clone`} style={{ textDecoration: 'none' }}>
-        <Button appearance="secondary" icon={<CopyRegular />}>Clone</Button>
-      </Link>
-      <Link href="/templates" style={{ textDecoration: 'none' }}>
-        <Button appearance="subtle">Back</Button>
-      </Link>
-    </>
-  )
-
   return (
     <>
       <PageHeader
@@ -66,7 +43,7 @@ export default async function TemplateDetailPage({ params }: Props) {
           { label: 'Templates', href: '/templates' },
           { label: template.name },
         ]}
-        actions={actions}
+        actions={<TemplateActions templateId={template.id} />}
       />
       <div style={{ padding: '24px' }}>
         <TemplateViewer template={template} />

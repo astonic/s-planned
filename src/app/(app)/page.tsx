@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Text } from '@fluentui/react-components'
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -10,9 +9,9 @@ export default async function DashboardPage() {
     <>
       <PageHeader title="Dashboard" />
       <div style={{ padding: '24px' }}>
-        <Text size={300}>
+        <p style={{ fontSize: 14, color: '#616161' }}>
           Welcome back, {session?.user.name}. Dashboard coming in Phase 7.
-        </Text>
+        </p>
       </div>
     </>
   )
