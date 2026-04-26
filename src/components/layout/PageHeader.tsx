@@ -8,16 +8,54 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
-    minHeight: '56px',
-    padding: `0 ${tokens.spacingHorizontalXXL}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+    minHeight: '64px',
+    padding: '0 var(--sp-space-4)',
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: 'var(--sp-shadow-1)',
     position: 'sticky',
-    top: 0,
+    top: 'calc(var(--sp-space-4) * -1)',
     zIndex: 100,
+    borderRadius: 'var(--sp-radius-lg)',
+    '@media (min-width: 640px)': {
+      padding: '0 var(--sp-space-5)',
+      top: 'calc(var(--sp-space-5) * -1)',
+    },
+    '@media (min-width: 1024px)': {
+      padding: '0 var(--sp-space-6)',
+      top: 'calc(var(--sp-space-6) * -1)',
+    },
   },
   title: { flex: 1 },
-  actions: { display: 'flex', gap: tokens.spacingHorizontalS, alignItems: 'center' },
+  titleText: {
+    fontSize: '18px',
+    fontWeight: 700,
+    lineHeight: 1.2,
+    color: tokens.colorNeutralForeground1,
+    '@media (min-width: 640px)': {
+      fontSize: '20px',
+    },
+    '@media (min-width: 1024px)': {
+      fontSize: '24px',
+    },
+  },
+  breadcrumb: {
+    display: 'none',
+    color: tokens.colorNeutralForeground3,
+    fontSize: '12px',
+    fontWeight: 600,
+    letterSpacing: '0.5px',
+    '@media (min-width: 640px)': {
+      display: 'block',
+    },
+  },
+  actions: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
 })
 
 interface BreadcrumbItem {
@@ -47,7 +85,7 @@ export function PageHeader({ title, breadcrumb, actions, onMenuClick }: PageHead
       )}
       <div className={styles.title}>
         {breadcrumb && breadcrumb.length > 0 && (
-          <Text size={100} style={{ color: tokens.colorNeutralForeground3, display: 'block' }}>
+          <Text className={styles.breadcrumb}>
             {breadcrumb.map((b, i) => (
               <span key={i}>
                 {i > 0 && ' / '}
@@ -56,7 +94,7 @@ export function PageHeader({ title, breadcrumb, actions, onMenuClick }: PageHead
             ))}
           </Text>
         )}
-        <Text size={500} weight="semibold">{title}</Text>
+        <Text className={styles.titleText}>{title}</Text>
       </div>
       {actions && <div className={styles.actions}>{actions}</div>}
     </header>

@@ -52,12 +52,15 @@ export function ProjectTabs({ overview, projectId, decisions, deliverablesProjec
   return (
     <div className={styles.root}>
       <SpTabBar tabs={tabs} selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as ProjectTab)} />
-      <div className={styles.tabContent}>
-        {tab === 'overview' && <ProjectOverview {...overview} />}
-        {tab === 'deliverables' && <WorkspaceView project={deliverablesProject} />}
-        {tab === 'decisions' && <DecisionLog projectId={projectId} initialDecisions={decisions} />}
-        {tab === 'raid' && <RAIDLogView projectId={projectId} items={raid.items} stats={raid.stats} />}
-      </div>
+      {tab === 'raid' ? (
+        <RAIDLogView projectId={projectId} items={raid.items} stats={raid.stats} />
+      ) : (
+        <div className={styles.tabContent}>
+          {tab === 'overview' && <ProjectOverview {...overview} />}
+          {tab === 'deliverables' && <WorkspaceView project={deliverablesProject} />}
+          {tab === 'decisions' && <DecisionLog projectId={projectId} initialDecisions={decisions} />}
+        </div>
+      )}
     </div>
   )
 }

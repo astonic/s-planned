@@ -32,12 +32,12 @@ import {
   DeleteRegular,
   WarningRegular,
 } from '@fluentui/react-icons'
-import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
-import { SpSectionCard } from '@/components/ui/SpSectionCard'
 import type { RAIDType, RAIDSeverity, RAIDStatus } from '@prisma/client'
 import type { RAIDItem } from '@prisma/client'
 import { deleteRAIDItem } from '@/lib/actions/raid'
 import { RAIDItemDialog } from './RAIDItemDialog'
+import { SpTabBar } from '@/components/ui/SpTabBar'
+import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
 
 export type RAIDItemWithCount = RAIDItem & {
   _count: { deliverables: number }
@@ -46,55 +46,73 @@ export type RAIDItemWithCount = RAIDItem & {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const useStyles = makeStyles({
-  container: {
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXXL}`,
+  root: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalL,
   },
-  statsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: tokens.spacingHorizontalM,
-  },
-  statCard: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
+  kpiBar: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: tokens.spacingVerticalXS,
-  },
-  statLabel: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
-    fontWeight: tokens.fontWeightSemibold,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  statValue: {
-    fontSize: tokens.fontSizeHero700,
-    fontWeight: tokens.fontWeightSemibold,
-    lineHeight: 1,
-  },
-  statSub: {
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground3,
-    display: 'flex',
-    gap: tokens.spacingHorizontalXS,
     alignItems: 'center',
+    gap: tokens.spacingHorizontalL,
+    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXXL}`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
     flexWrap: 'wrap',
   },
-  filterGroup: {
+  kpiItem: {
     display: 'flex',
+    alignItems: 'baseline',
     gap: tokens.spacingHorizontalXS,
-    alignItems: 'center',
   },
-  filterLabel: {
+  kpiValue: {
+    fontSize: tokens.fontSizeBase500,
+    fontWeight: tokens.fontWeightSemibold,
+    lineHeight: 1,
+    color: tokens.colorNeutralForeground1,
+  },
+  kpiValueDanger: {
+    color: tokens.colorPaletteRedForeground1,
+  },
+  kpiLabel: {
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground3,
     fontWeight: tokens.fontWeightSemibold,
+  },
+  kpiDivider: {
+    width: '1px',
+    height: '20px',
+    backgroundColor: tokens.colorNeutralStroke2,
+    flexShrink: 0,
+  },
+  content: {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXXL}`,
+    gap: tokens.spacingVerticalM,
+  },
+  toolbarRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
+  },
+  toolbarLeft: { flex: 1 },
+  statusPills: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalXS,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  gridWrap: {
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusMedium,
+    overflow: 'hidden',
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  empty: {
+    padding: `${tokens.spacingVerticalXL} ${tokens.spacingHorizontalL}`,
+    textAlign: 'center' as const,
+    color: tokens.colorNeutralForeground3,
+    fontStyle: 'italic',
   },
   actionCell: {
     display: 'flex',
@@ -144,12 +162,10 @@ const STATUS_LABELS: Record<RAIDStatus, string> = {
   closed: 'Closed',
 }
 
-// ── Filter types ──────────────────────────────────────────────────────────────
-
 type TypeFilter = 'all' | RAIDType
 type StatusFilter = 'all' | RAIDStatus
 
-// ── Stats Card ────────────────────────────────────────────────────────────────
+// ── Stats ─────────────────────────────────────────────────────────────────────
 
 interface StatsProps {
   total: number
@@ -159,41 +175,48 @@ interface StatsProps {
   closedCount: number
 }
 
-function StatCards({ total, byType, bySeverity, openCount, closedCount }: StatsProps) {
+function KpiBar({ total, byType, bySeverity, openCount, closedCount }: StatsProps) {
   const styles = useStyles()
   const hasCritical = bySeverity.critical > 0
 
   return (
-    <div className={styles.statsRow}>
-      <div className={styles.statCard}>
-        <span className={styles.statLabel}>Total Items</span>
-        <span className={styles.statValue}>{total}</span>
+    <div className={styles.kpiBar}>
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{total}</span>
+        <span className={styles.kpiLabel}>Total</span>
       </div>
-      <div className={styles.statCard}>
-        <span className={styles.statLabel}>Risks</span>
-        <span className={styles.statValue}>{byType.risk}</span>
-        <span className={styles.statSub}>
-          {byType.assumption} assumption{byType.assumption !== 1 ? 's' : ''},
-          {' '}{byType.issue} issue{byType.issue !== 1 ? 's' : ''},
-          {' '}{byType.dependency} dependenc{byType.dependency !== 1 ? 'ies' : 'y'}
+      <div className={styles.kpiDivider} />
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{byType.risk}</span>
+        <span className={styles.kpiLabel}>Risks</span>
+      </div>
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{byType.assumption}</span>
+        <span className={styles.kpiLabel}>Assumptions</span>
+      </div>
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{byType.issue}</span>
+        <span className={styles.kpiLabel}>Issues</span>
+      </div>
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{byType.dependency}</span>
+        <span className={styles.kpiLabel}>Dependencies</span>
+      </div>
+      <div className={styles.kpiDivider} />
+      <div className={styles.kpiItem}>
+        <span className={`${styles.kpiValue} ${hasCritical ? styles.kpiValueDanger : ''}`}>
+          {openCount}
         </span>
+        <span className={styles.kpiLabel}>Open</span>
+        {hasCritical && (
+          <Badge appearance="tint" color="danger" size="small" icon={<WarningRegular />}>
+            {bySeverity.critical} critical
+          </Badge>
+        )}
       </div>
-      <div className={styles.statCard}>
-        <span className={styles.statLabel}>Open</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS }}>
-          <span className={styles.statValue} style={{ color: hasCritical ? tokens.colorPaletteRedForeground1 : undefined }}>
-            {openCount}
-          </span>
-          {hasCritical && (
-            <Badge appearance="tint" color="danger" size="small" icon={<WarningRegular />}>
-              {bySeverity.critical} critical
-            </Badge>
-          )}
-        </div>
-      </div>
-      <div className={styles.statCard}>
-        <span className={styles.statLabel}>Closed</span>
-        <span className={styles.statValue}>{closedCount}</span>
+      <div className={styles.kpiItem}>
+        <span className={styles.kpiValue}>{closedCount}</span>
+        <span className={styles.kpiLabel}>Closed</span>
       </div>
     </div>
   )
@@ -201,12 +224,7 @@ function StatCards({ total, byType, bySeverity, openCount, closedCount }: StatsP
 
 // ── Delete Confirmation Dialog ─────────────────────────────────────────────────
 
-interface DeleteDialogProps {
-  item: RAIDItemWithCount
-  onDeleted: () => void
-}
-
-function DeleteConfirmDialog({ item, onDeleted }: DeleteDialogProps) {
+function DeleteConfirmDialog({ item, onDeleted }: { item: RAIDItemWithCount; onDeleted: () => void }) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -227,12 +245,7 @@ function DeleteConfirmDialog({ item, onDeleted }: DeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(_, data) => setOpen(data.open)}>
       <DialogTrigger disableButtonEnhancement>
-        <Button
-          appearance="subtle"
-          icon={<DeleteRegular />}
-          size="small"
-          aria-label="Delete RAID item"
-        />
+        <Button appearance="subtle" icon={<DeleteRegular />} size="small" aria-label="Delete RAID item" />
       </DialogTrigger>
       <DialogSurface>
         <DialogBody>
@@ -244,15 +257,12 @@ function DeleteConfirmDialog({ item, onDeleted }: DeleteDialogProps) {
               </MessageBar>
             )}
             <Text>
-              Are you sure you want to delete <strong>&ldquo;{item.title}&rdquo;</strong>? This action cannot
-              be undone.
+              Are you sure you want to delete <strong>&ldquo;{item.title}&rdquo;</strong>? This action cannot be undone.
             </Text>
           </DialogContent>
           <DialogActions>
             <DialogTrigger disableButtonEnhancement>
-              <Button appearance="secondary" disabled={isPending}>
-                Cancel
-              </Button>
+              <Button appearance="secondary" disabled={isPending}>Cancel</Button>
             </DialogTrigger>
             <Button
               appearance="primary"
@@ -285,7 +295,6 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
   const [search, setSearch] = useState('')
   const [editingItem, setEditingItem] = useState<RAIDItemWithCount | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
-  // Track deleted ids locally until revalidation
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
   const filteredItems = items.filter((item) => {
@@ -294,30 +303,15 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
     if (typeFilter !== 'all' && item.type !== typeFilter) return false
     if (statusFilter !== 'all' && item.status !== statusFilter) return false
     if (q) {
-      const haystack = [
-        item.title,
-        item.description ?? '',
-        item.owner ?? '',
-        item.type,
-        item.severity,
-        item.status,
-      ].join(' ').toLowerCase()
+      const haystack = [item.title, item.description ?? '', item.owner ?? '', item.type, item.severity, item.status]
+        .join(' ')
+        .toLowerCase()
       if (!haystack.includes(q)) return false
     }
     return true
   })
 
   const columns: TableColumnDefinition<RAIDItemWithCount>[] = [
-    createTableColumn({
-      columnId: 'type',
-      compare: (a, b) => a.type.localeCompare(b.type),
-      renderHeaderCell: () => 'Type',
-      renderCell: (item) => (
-        <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
-          {TYPE_LABELS[item.type]}
-        </Badge>
-      ),
-    }),
     createTableColumn({
       columnId: 'title',
       compare: (a, b) => a.title.localeCompare(b.title),
@@ -336,13 +330,23 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                maxWidth: '360px',
+                maxWidth: '380px',
               }}
             >
               {item.description}
             </Text>
           )}
         </div>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'type',
+      compare: (a, b) => a.type.localeCompare(b.type),
+      renderHeaderCell: () => 'Type',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
+          {TYPE_LABELS[item.type]}
+        </Badge>
       ),
     }),
     createTableColumn({
@@ -371,7 +375,7 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
       renderHeaderCell: () => 'Owner',
       renderCell: (item) => (
         <Text size={200} style={{ color: item.owner ? undefined : tokens.colorNeutralForeground3 }}>
-          {item.owner ?? '-'}
+          {item.owner ?? '—'}
         </Text>
       ),
     }),
@@ -382,12 +386,8 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
       renderCell: (item) => (
         <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
           {item.dueDate
-            ? new Date(item.dueDate).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })
-            : '-'}
+            ? new Date(item.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—'}
         </Text>
       ),
     }),
@@ -401,13 +401,13 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
             {item._count.deliverables}
           </Badge>
         ) : (
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>-</Text>
+          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
         ),
     }),
     createTableColumn({
       columnId: 'actions',
       compare: () => 0,
-      renderHeaderCell: () => 'Actions',
+      renderHeaderCell: () => '',
       renderCell: (item) => (
         <div className={styles.actionCell}>
           <Button
@@ -426,112 +426,99 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
     }),
   ]
 
-  const typeButtons: { label: string; value: TypeFilter }[] = [
-    { label: 'All', value: 'all' },
-    { label: 'Risk', value: 'risk' },
-    { label: 'Assumption', value: 'assumption' },
-    { label: 'Issue', value: 'issue' },
-    { label: 'Dependency', value: 'dependency' },
+  const typeTabs = [
+    { value: 'all' as const, label: 'All' },
+    { value: 'risk' as const, label: `Risks (${items.filter(i => i.type === 'risk').length})` },
+    { value: 'assumption' as const, label: `Assumptions (${items.filter(i => i.type === 'assumption').length})` },
+    { value: 'issue' as const, label: `Issues (${items.filter(i => i.type === 'issue').length})` },
+    { value: 'dependency' as const, label: `Dependencies (${items.filter(i => i.type === 'dependency').length})` },
   ]
 
-  const statusButtons: { label: string; value: StatusFilter }[] = [
+  const statusPills: { label: string; value: StatusFilter }[] = [
     { label: 'All', value: 'all' },
     { label: 'Open', value: 'open' },
     { label: 'In Progress', value: 'in_progress' },
     { label: 'Closed', value: 'closed' },
   ]
 
-  const filterPills = (
-    <>
-      <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Type:</span>
-        {typeButtons.map((btn) => (
-          <Button
-            key={btn.value}
-            size="small"
-            appearance={typeFilter === btn.value ? 'primary' : 'subtle'}
-            onClick={() => setTypeFilter(btn.value)}
-          >
-            {btn.label}
-          </Button>
-        ))}
-      </div>
-      <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Status:</span>
-        {statusButtons.map((btn) => (
-          <Button
-            key={btn.value}
-            size="small"
-            appearance={statusFilter === btn.value ? 'primary' : 'subtle'}
-            onClick={() => setStatusFilter(btn.value)}
-          >
-            {btn.label}
-          </Button>
-        ))}
-      </div>
-    </>
-  )
-
   return (
-    <div className={styles.container}>
-      <StatCards {...stats} />
+    <div className={styles.root}>
+      {/* Compact KPI summary bar */}
+      <KpiBar {...stats} />
 
-      <SpSectionCard
-        title="RAID Items"
-        count={filteredItems.length}
-        countLabel="item"
-        actions={
+      {/* Type tabs — matching SpTabBar used elsewhere */}
+      <SpTabBar
+        tabs={typeTabs}
+        selectedValue={typeFilter}
+        onTabSelect={(_, d) => setTypeFilter(d.value as TypeFilter)}
+      />
+
+      {/* Toolbar + grid */}
+      <div className={styles.content}>
+        <div className={styles.toolbarRow}>
+          <div className={styles.toolbarLeft}>
+            <SpGridToolbar
+              search={search}
+              onSearch={setSearch}
+              searchPlaceholder="Search RAID items..."
+            />
+          </div>
+          <div className={styles.statusPills}>
+            {statusPills.map((pill) => (
+              <Button
+                key={pill.value}
+                size="small"
+                appearance={statusFilter === pill.value ? 'primary' : 'subtle'}
+                onClick={() => setStatusFilter(pill.value)}
+              >
+                {pill.label}
+              </Button>
+            ))}
+          </div>
           <Button appearance="primary" icon={<AddRegular />} onClick={() => setCreateOpen(true)}>
-            Add RAID Item
+            Add Item
           </Button>
-        }
-        isEmpty={filteredItems.length === 0}
-        emptyMessage="No RAID items match the current filters."
-      >
-        <div style={{ padding: `0 ${tokens.spacingHorizontalL}` }}>
-          <SpGridToolbar
-            search={search}
-            onSearch={setSearch}
-            searchPlaceholder="Search RAID items..."
-            filters={filterPills}
-          />
         </div>
-        <DataGrid
-          aria-label="RAID Log grid"
-          items={filteredItems}
-          columns={columns}
-          sortable
-          size="small"
-          getRowId={(item) => item.id}
-        >
-          <DataGridHeader>
-            <DataGridRow>
-              {({ renderHeaderCell }) => (
-                <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
-              )}
-            </DataGridRow>
-          </DataGridHeader>
-          <DataGridBody<RAIDItemWithCount>>
-            {({ item, rowId }) => (
-              <DataGridRow key={rowId}>
-                {({ renderCell }) => (
-                  <DataGridCell>{renderCell(item)}</DataGridCell>
-                )}
-              </DataGridRow>
-            )}
-          </DataGridBody>
-        </DataGrid>
-      </SpSectionCard>
 
-      {/* Create dialog */}
+        <div className={styles.gridWrap}>
+          {filteredItems.length === 0 ? (
+            <div className={styles.empty}>
+              No RAID items match the current filters.
+            </div>
+          ) : (
+            <DataGrid
+              aria-label="RAID Log"
+              items={filteredItems}
+              columns={columns}
+              sortable
+              size="small"
+              getRowId={(item) => item.id}
+            >
+              <DataGridHeader>
+                <DataGridRow>
+                  {({ renderHeaderCell }) => (
+                    <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                  )}
+                </DataGridRow>
+              </DataGridHeader>
+              <DataGridBody<RAIDItemWithCount>>
+                {({ item, rowId }) => (
+                  <DataGridRow key={rowId}>
+                    {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                  </DataGridRow>
+                )}
+              </DataGridBody>
+            </DataGrid>
+          )}
+        </div>
+      </div>
+
       <RAIDItemDialog
         projectId={projectId}
         mode="create"
         open={createOpen}
         onOpenChange={setCreateOpen}
       />
-
-      {/* Edit dialog */}
       {editingItem && (
         <RAIDItemDialog
           projectId={projectId}
