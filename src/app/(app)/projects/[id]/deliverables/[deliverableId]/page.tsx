@@ -42,7 +42,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
   // Tenant check
   if (project.organizationId !== orgId) notFound()
 
-  const [linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents] = await Promise.all([
+  const [linkedRAID, projectRAID, orgPeople, orgVendors, auditEventRows, auditEventTypes] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
       where: { deliverableExecutionId: params.deliverableId },
       include: {
@@ -69,7 +69,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
         deliverableExecutionId: params.deliverableId,
       },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: 21,
       select: {
         id: true,
         actorName: true,
@@ -78,7 +78,19 @@ export default async function DeliverableDetailPage({ params }: Props) {
         createdAt: true,
       },
     }),
+    prisma.auditEvent.findMany({
+      where: {
+        organizationId: orgId,
+        deliverableExecutionId: params.deliverableId,
+      },
+      distinct: ['eventType'],
+      select: { eventType: true },
+      orderBy: { eventType: 'asc' },
+    }),
   ])
+
+  const auditEvents = auditEventRows.slice(0, 20)
+  const auditEventsHasMore = auditEventRows.length > 20
 
   return (
     <>
@@ -100,6 +112,8 @@ export default async function DeliverableDetailPage({ params }: Props) {
           orgPeople={orgPeople}
           orgVendors={orgVendors}
           auditEvents={auditEvents}
+          auditEventsHasMore={auditEventsHasMore}
+          auditEventTypes={auditEventTypes.map((t) => t.eventType)}
         />
       </div>
     </>

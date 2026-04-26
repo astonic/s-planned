@@ -97,21 +97,35 @@ export default async function ProjectDetailPage({ params }: Props) {
     },
   }
 
-  const recentActivity = await prisma.auditEvent.findMany({
-    where: {
-      organizationId,
-      projectId: params.id,
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-    select: {
-      id: true,
-      actorName: true,
-      eventType: true,
-      description: true,
-      createdAt: true,
-    },
-  })
+  const [recentActivityRows, recentActivityTypes] = await Promise.all([
+    prisma.auditEvent.findMany({
+      where: {
+        organizationId,
+        projectId: params.id,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 21,
+      select: {
+        id: true,
+        actorName: true,
+        eventType: true,
+        description: true,
+        createdAt: true,
+      },
+    }),
+    prisma.auditEvent.findMany({
+      where: {
+        organizationId,
+        projectId: params.id,
+      },
+      distinct: ['eventType'],
+      select: { eventType: true },
+      orderBy: { eventType: 'asc' },
+    }),
+  ])
+
+  const recentActivity = recentActivityRows.slice(0, 20)
+  const recentActivityHasMore = recentActivityRows.length > 20
 
   return (
     <>
@@ -140,6 +154,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         byPhase={byPhase}
         raidSummary={raidSummary}
         recentActivity={recentActivity}
+        recentActivityHasMore={recentActivityHasMore}
+        activityEventTypes={recentActivityTypes.map((t) => t.eventType)}
       />
     </>
   )

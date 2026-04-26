@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import {
   makeStyles,
   tokens,
@@ -15,6 +15,7 @@ import {
   Button,
 } from '@fluentui/react-components'
 import type { ProjectStatus, ProjectPhase } from '@prisma/client'
+import { getProjectActivityPage } from '@/lib/actions/activity'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,8 @@ export interface ProjectOverviewProps {
     description: string
     createdAt: Date
   }[]
+  recentActivityHasMore: boolean
+  activityEventTypes: string[]
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -432,6 +435,8 @@ export function ProjectOverview({
   projectId,
   raidSummary,
   recentActivity,
+  recentActivityHasMore,
+  activityEventTypes,
 }: ProjectOverviewProps) {
   const styles = useStyles()
   const statusCfg = STATUS_CONFIG[projectStatus]
@@ -440,34 +445,44 @@ export function ProjectOverview({
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
-  const [visibleActivityCount, setVisibleActivityCount] = useState(10)
+  const [activityItems, setActivityItems] = useState(recentActivity)
+  const [activityHasMore, setActivityHasMore] = useState(recentActivityHasMore)
+  const [activityOffset, setActivityOffset] = useState(recentActivity.length)
+  const [activityTypes, setActivityTypes] = useState(activityEventTypes)
+  const [activityPending, startActivityTransition] = useTransition()
 
-  const activityTypes = useMemo(
-    () => Array.from(new Set(recentActivity.map((event) => event.eventType))).sort(),
-    [recentActivity]
-  )
-
-  const filteredRecentActivity = useMemo(() => {
-    const q = activityQuery.trim().toLowerCase()
-    return recentActivity.filter((event) => {
-      if (activityType !== 'all' && event.eventType !== activityType) return false
-      if (!q) return true
-      return (
-        event.actorName.toLowerCase().includes(q) ||
-        event.description.toLowerCase().includes(q) ||
-        event.eventType.toLowerCase().includes(q)
-      )
+  async function refreshActivity(reset: boolean) {
+    const offset = reset ? 0 : activityOffset
+    const result = await getProjectActivityPage(projectId, {
+      offset,
+      limit: 20,
+      query: activityQuery.trim() || undefined,
+      eventType: activityType === 'all' ? undefined : activityType,
     })
-  }, [recentActivity, activityQuery, activityType])
+
+    if (!result.ok) return
+
+    if (reset) {
+      setActivityItems(result.data.items)
+      setActivityOffset(result.data.items.length)
+      setActivityHasMore(result.data.hasMore)
+      setActivityTypes(result.data.eventTypes)
+    } else {
+      setActivityItems((prev) => [...prev, ...result.data.items])
+      setActivityOffset((prev) => prev + result.data.items.length)
+      setActivityHasMore(result.data.hasMore)
+    }
+  }
 
   useEffect(() => {
-    setVisibleActivityCount(10)
-  }, [activityQuery, activityType])
+    const timer = setTimeout(() => {
+      startActivityTransition(async () => {
+        await refreshActivity(true)
+      })
+    }, 250)
 
-  const visibleRecentActivity = useMemo(
-    () => filteredRecentActivity.slice(0, visibleActivityCount),
-    [filteredRecentActivity, visibleActivityCount]
-  )
+    return () => clearTimeout(timer)
+  }, [activityQuery, activityType])
 
   return (
     <div className={styles.root}>
@@ -653,7 +668,7 @@ export function ProjectOverview({
           Recent Activity
         </Text>
         <Card className={styles.activityCard}>
-          {recentActivity.length === 0 ? (
+          {activityItems.length === 0 && !activityPending ? (
             <Text className={styles.activityEmpty}>No activity recorded yet for this project.</Text>
           ) : (
             <>
@@ -677,11 +692,15 @@ export function ProjectOverview({
                 </Select>
               </div>
 
-              {filteredRecentActivity.length === 0 ? (
+              {activityPending && (
+                <Text className={styles.activityEmpty}>Loading activity…</Text>
+              )}
+
+              {!activityPending && activityItems.length === 0 ? (
                 <Text className={styles.activityEmpty}>No activity matches the current filters.</Text>
               ) : (
                 <div className={styles.activityList}>
-                  {visibleRecentActivity.map((event) => (
+                  {activityItems.map((event) => (
                     <div key={event.id} className={styles.activityRow}>
                       <div className={styles.activityMeta}>
                         <Text size={200}>{event.actorName}</Text>
@@ -701,11 +720,15 @@ export function ProjectOverview({
                       </Text>
                     </div>
                   ))}
-                  {filteredRecentActivity.length > visibleActivityCount && (
+                  {activityHasMore && !activityPending && (
                     <div className={styles.activityLoadMore}>
                       <Button
                         appearance="subtle"
-                        onClick={() => setVisibleActivityCount((prev) => prev + 10)}
+                        onClick={() => {
+                          startActivityTransition(async () => {
+                            await refreshActivity(false)
+                          })
+                        }}
                       >
                         Load more
                       </Button>

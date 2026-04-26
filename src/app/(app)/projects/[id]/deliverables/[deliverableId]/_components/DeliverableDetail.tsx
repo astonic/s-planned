@@ -38,6 +38,7 @@ import {
   linkVendorToDeliverable,
   unlinkVendorFromDeliverable,
 } from '@/lib/actions/stakeholders'
+import { getDeliverableActivityPage } from '@/lib/actions/activity'
 import { unlinkRAIDFromDeliverable } from '@/lib/actions/raid'
 import { LinkRAIDDialog } from './LinkRAIDDialog'
 import type { RAIDItemSummary } from './LinkRAIDDialog'
@@ -216,6 +217,8 @@ interface Props {
     description: string
     createdAt: Date
   }[]
+  auditEventsHasMore: boolean
+  auditEventTypes: string[]
 }
 
 function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliverableId: string }) {
@@ -231,7 +234,7 @@ function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliv
   )
 }
 
-export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents }: Props) {
+export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents, auditEventsHasMore, auditEventTypes }: Props) {
   const styles = useStyles()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'raid'>('details')
@@ -286,34 +289,44 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
-  const [visibleActivityCount, setVisibleActivityCount] = useState(10)
+  const [activityItems, setActivityItems] = useState(auditEvents)
+  const [activityHasMore, setActivityHasMore] = useState(auditEventsHasMore)
+  const [activityOffset, setActivityOffset] = useState(auditEvents.length)
+  const [activityTypes, setActivityTypes] = useState(auditEventTypes)
+  const [activityPending, startActivityTransition] = useTransition()
 
-  const activityTypes = useMemo(
-    () => Array.from(new Set(auditEvents.map((event) => event.eventType))).sort(),
-    [auditEvents]
-  )
-
-  const filteredAuditEvents = useMemo(() => {
-    const q = activityQuery.trim().toLowerCase()
-    return auditEvents.filter((event) => {
-      if (activityType !== 'all' && event.eventType !== activityType) return false
-      if (!q) return true
-      return (
-        event.actorName.toLowerCase().includes(q) ||
-        event.description.toLowerCase().includes(q) ||
-        event.eventType.toLowerCase().includes(q)
-      )
+  async function refreshActivity(reset: boolean) {
+    const offset = reset ? 0 : activityOffset
+    const result = await getDeliverableActivityPage(deliverable.id, {
+      offset,
+      limit: 20,
+      query: activityQuery.trim() || undefined,
+      eventType: activityType === 'all' ? undefined : activityType,
     })
-  }, [auditEvents, activityQuery, activityType])
+
+    if (!result.ok) return
+
+    if (reset) {
+      setActivityItems(result.data.items)
+      setActivityOffset(result.data.items.length)
+      setActivityHasMore(result.data.hasMore)
+      setActivityTypes(result.data.eventTypes)
+    } else {
+      setActivityItems((prev) => [...prev, ...result.data.items])
+      setActivityOffset((prev) => prev + result.data.items.length)
+      setActivityHasMore(result.data.hasMore)
+    }
+  }
 
   useEffect(() => {
-    setVisibleActivityCount(10)
-  }, [activityQuery, activityType])
+    const timer = setTimeout(() => {
+      startActivityTransition(async () => {
+        await refreshActivity(true)
+      })
+    }, 250)
 
-  const visibleAuditEvents = useMemo(
-    () => filteredAuditEvents.slice(0, visibleActivityCount),
-    [filteredAuditEvents, visibleActivityCount]
-  )
+    return () => clearTimeout(timer)
+  }, [activityQuery, activityType])
 
   return (
     <div className={styles.layout}>
@@ -392,7 +405,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
         )}
         {activeTab === 'activity' && (
           <div className={styles.tabContent}>
-            {auditEvents.length === 0 ? (
+            {activityItems.length === 0 && !activityPending ? (
               <Text className={styles.activityPlaceholder}>No audit events yet for this deliverable.</Text>
             ) : (
               <>
@@ -416,11 +429,15 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                   </Select>
                 </div>
 
-                {filteredAuditEvents.length === 0 ? (
+                {activityPending && (
+                  <Text className={styles.activityPlaceholder}>Loading activity…</Text>
+                )}
+
+                {!activityPending && activityItems.length === 0 ? (
                   <Text className={styles.activityPlaceholder}>No activity matches the current filters.</Text>
                 ) : (
                   <div className={styles.activityList}>
-                    {visibleAuditEvents.map((event) => (
+                    {activityItems.map((event) => (
                       <div key={event.id} className={styles.activityRow}>
                         <div className={styles.activityMeta}>
                           <Text size={200}>{event.actorName}</Text>
@@ -440,11 +457,15 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                         </Text>
                       </div>
                     ))}
-                    {filteredAuditEvents.length > visibleActivityCount && (
+                    {activityHasMore && !activityPending && (
                       <div className={styles.activityLoadMore}>
                         <Button
                           appearance="subtle"
-                          onClick={() => setVisibleActivityCount((prev) => prev + 10)}
+                          onClick={() => {
+                            startActivityTransition(async () => {
+                              await refreshActivity(false)
+                            })
+                          }}
                         >
                           Load more
                         </Button>
