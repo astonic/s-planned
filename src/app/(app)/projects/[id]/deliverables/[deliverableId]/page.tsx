@@ -42,7 +42,18 @@ export default async function DeliverableDetailPage({ params }: Props) {
   // Tenant check
   if (project.organizationId !== orgId) notFound()
 
-  const [linkedRAID, projectRAID, orgPeople, orgVendors, auditEventRows, auditEventTypes] = await Promise.all([
+  const [
+    linkedRAID,
+    projectRAID,
+    orgPeople,
+    orgVendors,
+    auditEventRows,
+    auditEventTypes,
+    evidenceItems,
+    criteriaCompletions,
+    templateCriteria,
+    evidenceRequirements,
+  ] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
       where: { deliverableExecutionId: params.deliverableId },
       include: {
@@ -87,10 +98,44 @@ export default async function DeliverableDetailPage({ params }: Props) {
       select: { eventType: true },
       orderBy: { eventType: 'asc' },
     }),
+    prisma.evidence.findMany({
+      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+      orderBy: { uploadedAt: 'desc' },
+    }),
+    prisma.criteriaCompletion.findMany({
+      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+    }),
+    // Acceptance criteria from the deliverable template
+    deliverable.templateDeliverableId
+      ? prisma.acceptanceCriteria.findMany({
+          where: { deliverableTemplateId: deliverable.templateDeliverableId },
+          orderBy: { id: 'asc' },
+        })
+      : Promise.resolve([]),
+    // Evidence requirements from the deliverable template
+    deliverable.templateDeliverableId
+      ? prisma.evidenceRequirement.findMany({
+          where: { deliverableTemplateId: deliverable.templateDeliverableId },
+          orderBy: { id: 'asc' },
+        })
+      : Promise.resolve([]),
   ])
 
   const auditEvents = auditEventRows.slice(0, 20)
   const auditEventsHasMore = auditEventRows.length > 20
+
+  // Shape criteria with completions merged in
+  const criteriaWithCompletions = templateCriteria.map((c) => {
+    const comp = criteriaCompletions.find((cc) => cc.acceptanceCriteriaId === c.id)
+    return {
+      id: c.id,
+      description: c.description,
+      verificationMethod: c.verificationMethod,
+      completion: comp
+        ? { completed: comp.completed, completedAt: comp.completedAt, completedBy: comp.completedBy }
+        : null,
+    }
+  })
 
   return (
     <>
@@ -114,6 +159,9 @@ export default async function DeliverableDetailPage({ params }: Props) {
           auditEvents={auditEvents}
           auditEventsHasMore={auditEventsHasMore}
           auditEventTypes={auditEventTypes.map((t) => t.eventType)}
+          evidenceItems={evidenceItems}
+          evidenceRequirements={evidenceRequirements}
+          criteria={criteriaWithCompletions}
         />
       </div>
     </>

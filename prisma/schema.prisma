@@ -201,6 +201,7 @@ model AcceptanceCriteria {
   verificationMethod   String?
 
   deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  completions          CriteriaCompletion[]
 
   @@index([deliverableTemplateId])
   @@map("acceptance_criteria")
@@ -215,6 +216,7 @@ model EvidenceRequirement {
   required             Boolean             @default(true)
 
   deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  evidenceItems        Evidence[]
 
   @@index([deliverableTemplateId])
   @@map("evidence_requirements")
@@ -346,6 +348,8 @@ model DeliverableExecution {
   vendorLinks         DeliverableExecutionVendor[]
   owner               Person?              @relation("DeliverableOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   ownerId             String?
+  evidenceItems       Evidence[]
+  criteriaCompletions CriteriaCompletion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -504,4 +508,58 @@ model DeliverableExecutionVendor {
 
   @@id([deliverableExecutionId, vendorId])
   @@map("deliverable_execution_vendors")
+}
+
+// ── Phase 6: Evidence & Acceptance Criteria ───────────────────────────────────
+
+enum EvidenceType {
+  document
+  image
+  link
+  sign_off
+}
+
+model Evidence {
+  id                     String              @id @default(uuid())
+  organizationId         String
+  deliverableExecutionId String
+  evidenceRequirementId  String?
+
+  name         String
+  type         EvidenceType
+  url          String
+  fileSize     Int?
+
+  uploadedBy   String
+  uploadedAt   DateTime            @default(now())
+
+  verified     Boolean             @default(false)
+  verifiedAt   DateTime?
+  verifiedBy   String?
+
+  deliverableExecution  DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+  evidenceRequirement   EvidenceRequirement? @relation(fields: [evidenceRequirementId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([deliverableExecutionId])
+  @@map("evidence")
+}
+
+model CriteriaCompletion {
+  id                     String @id @default(uuid())
+  organizationId         String
+  deliverableExecutionId String
+  acceptanceCriteriaId   String
+
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+  completedBy  String?
+  notes        String?
+
+  deliverableExecution DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+  acceptanceCriteria   AcceptanceCriteria   @relation(fields: [acceptanceCriteriaId], references: [id], onDelete: Cascade)
+
+  @@unique([deliverableExecutionId, acceptanceCriteriaId])
+  @@index([deliverableExecutionId])
+  @@map("criteria_completions")
 }
