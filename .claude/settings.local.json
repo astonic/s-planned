@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Read(//Users/astonmotsau/dev/s-planned/**)",
+      "Bash(git -C /Users/astonmotsau/dev/s-planned log --oneline -5)",
+      "Bash(docker compose *)",
+      "Bash(npx prisma *)",
+      "Bash(rm -f .env)",
+      "Bash(/usr/local/bin/docker --version)",
+      "Bash(/Applications/Docker.app/Contents/Resources/bin/docker --version)",
+      "Bash(pg_isready -h localhost -p 5432 -U splanned)",
+      "Bash(DATABASE_URL=\"postgresql://splanned:splanned@localhost:5432/splanned_dev\" npx prisma migrate dev --name init --create-only)"
     ]
   }
 }

@@ -19,6 +19,16 @@ build/
 .next/
 out/
 
+# Prisma
+/prisma/migrations/*/migration_lock.toml
+
+# Uploads
+/uploads/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
 # Environment
 .env
 .env.local
