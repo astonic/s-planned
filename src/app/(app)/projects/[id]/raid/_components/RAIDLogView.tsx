@@ -493,6 +493,17 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
               sortable
               size="small"
               getRowId={(item) => item.id}
+              columnSizingOptions={{
+                title:   { defaultWidth: 340, minWidth: 200 },
+                type:    { defaultWidth: 110, minWidth: 90 },
+                severity:{ defaultWidth: 100, minWidth: 80 },
+                status:  { defaultWidth: 110, minWidth: 90 },
+                owner:   { defaultWidth: 130, minWidth: 100 },
+                dueDate: { defaultWidth: 110, minWidth: 90 },
+                linked:  { defaultWidth: 80,  minWidth: 60 },
+                actions: { defaultWidth: 72,  minWidth: 72 },
+              }}
+              resizableColumns
             >
               <DataGridHeader>
                 <DataGridRow>
