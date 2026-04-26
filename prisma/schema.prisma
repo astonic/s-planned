@@ -107,3 +107,143 @@ model OrganizationMembership {
   @@index([organizationId])
   @@map("organization_memberships")
 }
+
+// ── Template Engine (Phase 2) ─────────────────────────────────────────────────
+
+model Template {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  description    String?
+  industry       String?
+  version        String   @default("1.0")
+  isArchived     Boolean  @default(false)
+
+  focusAreas     FocusArea[]
+  auditEvents    AuditEvent[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("templates")
+}
+
+model FocusArea {
+  id          String   @id @default(uuid())
+  templateId  String
+  code        String
+  name        String
+  order       Int      @default(0)
+
+  template    Template    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  subSections SubSection[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([templateId])
+  @@map("focus_areas")
+}
+
+model SubSection {
+  id          String   @id @default(uuid())
+  focusAreaId String
+  code        String
+  name        String
+  order       Int      @default(0)
+
+  focusArea   FocusArea             @relation(fields: [focusAreaId], references: [id], onDelete: Cascade)
+  deliverables DeliverableTemplate[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([focusAreaId])
+  @@map("sub_sections")
+}
+
+enum ProjectPhase {
+  pre_commissioning
+  commissioning
+  ramp_up
+  handover
+}
+
+model DeliverableTemplate {
+  id                String   @id @default(uuid())
+  subSectionId      String
+  code              String
+  name              String
+  description       String?
+  phase             ProjectPhase?
+  domain            String?
+  estimatedDuration Int?
+
+  subSection          SubSection            @relation(fields: [subSectionId], references: [id], onDelete: Cascade)
+  acceptanceCriteria  AcceptanceCriteria[]
+  evidenceRequirements EvidenceRequirement[]
+  dependencies        DeliverableTemplateDependency[] @relation("DependencySource")
+  dependents          DeliverableTemplateDependency[] @relation("DependencyTarget")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([subSectionId])
+  @@map("deliverable_templates")
+}
+
+model AcceptanceCriteria {
+  id                   String              @id @default(uuid())
+  deliverableTemplateId String
+  description          String
+  verificationMethod   String?
+
+  deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableTemplateId])
+  @@map("acceptance_criteria")
+}
+
+model EvidenceRequirement {
+  id                   String              @id @default(uuid())
+  deliverableTemplateId String
+  name                 String
+  type                 String?
+  description          String?
+  required             Boolean             @default(true)
+
+  deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableTemplateId])
+  @@map("evidence_requirements")
+}
+
+model DeliverableTemplateDependency {
+  sourceId String
+  targetId String
+
+  source   DeliverableTemplate @relation("DependencySource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target   DeliverableTemplate @relation("DependencyTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([sourceId, targetId])
+  @@map("deliverable_template_dependencies")
+}
+
+model AuditEvent {
+  id             String   @id @default(uuid())
+  organizationId String
+  templateId     String?
+  actorName      String
+  eventType      String
+  description    String
+  metadata       Json?
+
+  template       Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([templateId])
+  @@map("audit_events")
+}

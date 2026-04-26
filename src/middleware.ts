@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server'
 const PUBLIC_PREFIXES = [
   '/landing',
   '/use-cases',
+  '/template-gallery',
   '/login',
   '/register',
   '/r/',

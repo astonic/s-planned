@@ -148,6 +148,48 @@ export default function LoginPage() {
         </form>
       </Card>
 
+      {/* ── Demo accounts (remove before production) ── */}
+      <div style={{
+        marginTop: 20, width: '100%', maxWidth: 400,
+        border: '1.5px dashed #F7B900',
+        borderRadius: 10, padding: '14px 18px',
+        backgroundColor: '#FFFBEA',
+      }}>
+        <Text size={100} weight="semibold" style={{ color: '#856404', display: 'block', marginBottom: 10 }}>
+          🧪 Demo accounts (testing only)
+        </Text>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {[
+            { label: 'Owner', email: 'admin@example.com', password: 'password123', color: '#C4314B' },
+            { label: 'Member', email: 'member@example.com', password: 'password123', color: '#1474CB' },
+            { label: 'Viewer', email: 'viewer@example.com', password: 'password123', color: '#13A10E' },
+          ].map(({ label, email, password, color }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                form.setValue('email', email)
+                form.setValue('password', password)
+                form.handleSubmit(onSubmit)()
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '7px 12px', borderRadius: 6, border: `1px solid ${color}22`,
+                backgroundColor: '#fff', cursor: 'pointer', textAlign: 'left',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${color}0D`)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#fff')}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color }}>
+                {label}
+              </span>
+              <span style={{ fontSize: 11, color: '#888' }}>{email}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Text size={200} className={styles.footer} style={{ marginTop: '16px' }}>
         Don&apos;t have an account?{' '}
         <Link href="/register" style={{ color: tokens.colorBrandForeground1 }}>

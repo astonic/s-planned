@@ -5,6 +5,14 @@ const nextConfig = {
     '@fluentui/react-icons',
     '@griffel/react',
   ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+  },
 }
 
 module.exports = nextConfig

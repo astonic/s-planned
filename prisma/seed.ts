@@ -6,39 +6,36 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding dev data…')
 
-  const passwordHash = await bcrypt.hash('password123', 12)
+  const hash = (pw: string) => bcrypt.hash(pw, 12)
 
-  const existingUser = await prisma.user.findUnique({ where: { email: 'admin@example.com' } })
-
-  if (!existingUser) {
-    const user = await prisma.user.create({
-      data: {
-        name: 'Admin User',
-        email: 'admin@example.com',
-        passwordHash,
-      },
+  let org = await prisma.organization.findUnique({ where: { slug: 'example-mining-co' } })
+  if (!org) {
+    org = await prisma.organization.create({
+      data: { name: 'Example Mining Co', slug: 'example-mining-co' },
     })
-
-    const org = await prisma.organization.create({
-      data: {
-        name: 'Example Mining Co',
-        slug: 'example-mining-co',
-      },
-    })
-
-    await prisma.organizationMembership.create({
-      data: {
-        userId: user.id,
-        organizationId: org.id,
-        role: 'owner',
-      },
-    })
-
-    console.log('Created user admin@example.com (password: password123)')
     console.log('Created org: Example Mining Co')
-  } else {
-    console.log('Seed data already exists — skipping')
   }
+
+  const accounts = [
+    { name: 'Admin User',  email: 'admin@example.com',  role: 'owner'  as const },
+    { name: 'Member User', email: 'member@example.com', role: 'member' as const },
+    { name: 'Viewer User', email: 'viewer@example.com', role: 'viewer' as const },
+  ]
+
+  for (const { name, email, role } of accounts) {
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (!existing) {
+      const user = await prisma.user.create({
+        data: { name, email, passwordHash: await hash('password123') },
+      })
+      await prisma.organizationMembership.create({
+        data: { userId: user.id, organizationId: org.id, role },
+      })
+      console.log(`Created ${role}: ${email} / password123`)
+    }
+  }
+
+  console.log('Seed complete.')
 }
 
 main()

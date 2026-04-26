@@ -4,6 +4,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'S-Planned — Operational Readiness Platform',
   description: 'Plan, track, and evidence operational readiness activities.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

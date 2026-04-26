@@ -96,7 +96,7 @@ ALTER TABLE "organization_memberships" ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "tenant_isolation" ON "organization_memberships"
   USING (
-    organization_id::text = current_setting('app.current_tenant_id', true)
+    "organizationId"::text = current_setting('app.current_tenant_id', true)
   );
 
 ALTER TABLE "organization_memberships" FORCE ROW LEVEL SECURITY;
