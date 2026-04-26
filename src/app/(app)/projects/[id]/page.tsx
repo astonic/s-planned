@@ -97,6 +97,22 @@ export default async function ProjectDetailPage({ params }: Props) {
     },
   }
 
+  const recentActivity = await prisma.auditEvent.findMany({
+    where: {
+      organizationId,
+      projectId: params.id,
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    select: {
+      id: true,
+      actorName: true,
+      eventType: true,
+      description: true,
+      createdAt: true,
+    },
+  })
+
   return (
     <>
       <PageHeader
@@ -123,6 +139,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         byFocusArea={byFocusArea}
         byPhase={byPhase}
         raidSummary={raidSummary}
+        recentActivity={recentActivity}
       />
     </>
   )

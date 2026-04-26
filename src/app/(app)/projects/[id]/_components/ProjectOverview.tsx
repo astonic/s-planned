@@ -57,6 +57,13 @@ export interface ProjectOverviewProps {
   byPhase: PhaseCounts
   projectId: string
   raidSummary: RAIDSummary
+  recentActivity: {
+    id: string
+    actorName: string
+    eventType: string
+    description: string
+    createdAt: Date
+  }[]
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -290,6 +297,37 @@ const useStyles = makeStyles({
   descriptionFull: {
     gridColumn: '1 / -1',
   },
+
+  // Activity section
+  activityCard: {
+    padding: tokens.spacingVerticalL,
+  },
+  activityList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+  },
+  activityRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  activityMeta: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+  },
+  activityEmpty: {
+    color: tokens.colorNeutralForeground3,
+    fontStyle: 'italic',
+  },
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -375,6 +413,7 @@ export function ProjectOverview({
   byPhase,
   projectId,
   raidSummary,
+  recentActivity,
 }: ProjectOverviewProps) {
   const styles = useStyles()
   const statusCfg = STATUS_CONFIG[projectStatus]
@@ -557,6 +596,41 @@ export function ProjectOverview({
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* ── Recent Activity ──────────────────────────────────────────────────── */}
+      <div>
+        <Text size={400} weight="semibold" className={styles.sectionTitle} block>
+          Recent Activity
+        </Text>
+        <Card className={styles.activityCard}>
+          {recentActivity.length === 0 ? (
+            <Text className={styles.activityEmpty}>No activity recorded yet for this project.</Text>
+          ) : (
+            <div className={styles.activityList}>
+              {recentActivity.map((event) => (
+                <div key={event.id} className={styles.activityRow}>
+                  <div className={styles.activityMeta}>
+                    <Text size={200}>{event.actorName}</Text>
+                    <Text size={200}>
+                      {new Date(event.createdAt).toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                  </div>
+                  <Text weight="semibold">{event.description}</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                    {event.eventType}
+                  </Text>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
 
       {/* ── Project metadata ─────────────────────────────────────────────────── */}
