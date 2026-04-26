@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth, hasRole } from '@/lib/security'
 import type { DecisionStatus } from '@prisma/client'
 
 type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
@@ -14,10 +15,9 @@ export async function addDeliverableNote(
   deliverableId: string,
   text: string
 ): Promise<ActionResult<{ id: string; text: string; authorName: string; createdAt: Date }>> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const deliverable = await prisma.deliverableExecution.findFirst({
     where: { id: deliverableId, organizationId: orgId },
@@ -53,10 +53,9 @@ export async function addDeliverableNote(
 }
 
 export async function deleteDeliverableNote(noteId: string): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const note = await prisma.deliverableNote.findFirst({
     where: { id: noteId, organizationId: orgId },
@@ -93,10 +92,9 @@ export async function createDecision(
     comments?: string
   }
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const project = await prisma.project.findFirst({ where: { id: projectId, organizationId: orgId } })
   if (!project) return { ok: false, error: 'Project not found' }
@@ -143,10 +141,9 @@ export async function updateDecision(
     comments?: string | null
   }
 ): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const decision = await prisma.decision.findFirst({ where: { id: decisionId, organizationId: orgId } })
   if (!decision) return { ok: false, error: 'Decision not found' }
@@ -181,10 +178,9 @@ export async function updateDecision(
 }
 
 export async function deleteDecision(decisionId: string): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const decision = await prisma.decision.findFirst({ where: { id: decisionId, organizationId: orgId } })
   if (!decision) return { ok: false, error: 'Decision not found' }

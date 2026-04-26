@@ -4,23 +4,21 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { randomBytes } from 'crypto'
+import { requireAuth, validateEmail } from '@/lib/security'
+import { checkPublicActionRateLimit } from '@/lib/rate-limit'
+import { headers } from 'next/headers'
 
 type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function getAdminOrgId(): Promise<{ orgId: string; actorName: string } | null> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return null
-  const membership = await prisma.organizationMembership.findFirst({
-    where: {
-      organizationId: session.currentOrganizationId,
-      userId: session.user?.id,
-      role: { in: ['owner', 'admin'] },
-    },
-  })
-  if (!membership) return null
-  return { orgId: session.currentOrganizationId, actorName: session.user?.name ?? 'Unknown' }
+  try {
+    const auth = await requireAuth('admin')
+    return { orgId: auth.orgId, actorName: auth.userName }
+  } catch {
+    return null
+  }
 }
 
 function generateInviteToken(): string {
@@ -50,8 +48,14 @@ export async function createInvite(input: CreateInviteInput): Promise<ActionResu
   const auth = await getAdminOrgId()
   if (!auth) return { ok: false, error: 'Unauthorized' }
 
-  const email = input.email.toLowerCase().trim()
-  if (!email.includes('@')) return { ok: false, error: 'Invalid email address' }
+  // Validate email
+  let email: string
+  try {
+    email = validateEmail(input.email)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Invalid email'
+    return { ok: false, error: msg }
+  }
 
   // Check if user already exists in org
   const existing = await prisma.organizationMembership.findFirst({
@@ -144,6 +148,14 @@ export interface AcceptInviteInput {
 }
 
 export async function acceptInvite(input: AcceptInviteInput): Promise<ActionResult<{ redirectUrl: string }>> {
+  // Rate limit public action
+  const headersList = await headers()
+  const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
+  const rateLimit = checkPublicActionRateLimit(ip)
+  if (!rateLimit.allowed) {
+    return { ok: false, error: 'Too many attempts. Please try again later.' }
+  }
+
   // Public action, no auth required
   const invite = await prisma.invite.findUnique({
     where: { token: input.token },
