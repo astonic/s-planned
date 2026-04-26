@@ -349,6 +349,17 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontStyle: 'italic',
   },
+  activityError: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorStatusDangerBorderActive}`,
+    backgroundColor: tokens.colorStatusDangerBackground1,
+    color: tokens.colorStatusDangerForeground1,
+    fontSize: tokens.fontSizeBase200,
+  },
 })
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -450,27 +461,36 @@ export function ProjectOverview({
   const [activityOffset, setActivityOffset] = useState(recentActivity.length)
   const [activityTypes, setActivityTypes] = useState(activityEventTypes)
   const [activityPending, startActivityTransition] = useTransition()
+  const [activityError, setActivityError] = useState<string | null>(null)
 
   async function refreshActivity(reset: boolean) {
     const offset = reset ? 0 : activityOffset
-    const result = await getProjectActivityPage(projectId, {
-      offset,
-      limit: 20,
-      query: activityQuery.trim() || undefined,
-      eventType: activityType === 'all' ? undefined : activityType,
-    })
+    try {
+      const result = await getProjectActivityPage(projectId, {
+        offset,
+        limit: 20,
+        query: activityQuery.trim() || undefined,
+        eventType: activityType === 'all' ? undefined : activityType,
+      })
 
-    if (!result.ok) return
+      if (!result.ok) {
+        setActivityError(result.error ?? 'Failed to load activity.')
+        return
+      }
 
-    if (reset) {
-      setActivityItems(result.data.items)
-      setActivityOffset(result.data.items.length)
-      setActivityHasMore(result.data.hasMore)
-      setActivityTypes(result.data.eventTypes)
-    } else {
-      setActivityItems((prev) => [...prev, ...result.data.items])
-      setActivityOffset((prev) => prev + result.data.items.length)
-      setActivityHasMore(result.data.hasMore)
+      setActivityError(null)
+      if (reset) {
+        setActivityItems(result.data.items)
+        setActivityOffset(result.data.items.length)
+        setActivityHasMore(result.data.hasMore)
+        setActivityTypes(result.data.eventTypes)
+      } else {
+        setActivityItems((prev) => [...prev, ...result.data.items])
+        setActivityOffset((prev) => prev + result.data.items.length)
+        setActivityHasMore(result.data.hasMore)
+      }
+    } catch (e) {
+      setActivityError((e as Error).message ?? 'An unexpected error occurred.')
     }
   }
 
@@ -692,11 +712,28 @@ export function ProjectOverview({
                 </Select>
               </div>
 
+              {activityError && (
+                <div className={styles.activityError}>
+                  <Text size={200}>{activityError}</Text>
+                  <Button
+                    size="small"
+                    appearance="subtle"
+                    onClick={() => {
+                      startActivityTransition(async () => {
+                        await refreshActivity(true)
+                      })
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+
               {activityPending && (
                 <Text className={styles.activityEmpty}>Loading activity…</Text>
               )}
 
-              {!activityPending && activityItems.length === 0 ? (
+              {!activityPending && !activityError && !activityError && activityItems.length === 0 ? (
                 <Text className={styles.activityEmpty}>No activity matches the current filters.</Text>
               ) : (
                 <div className={styles.activityList}>
