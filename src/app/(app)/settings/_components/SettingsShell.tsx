@@ -10,6 +10,7 @@ import { StorageSettingsForm } from './StorageSettingsForm'
 import { SmtpSettingsForm } from './SmtpSettingsForm'
 import { NotificationSettingsForm } from './NotificationSettingsForm'
 import { UsersSettingsPanel, type MemberRow } from './UsersSettingsPanel'
+import { type PendingInvite } from './PendingInvitesTable'
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -43,6 +44,7 @@ interface SettingsData {
   notifyRaid: boolean
   notifyDigest: boolean
   members: MemberRow[]
+  pendingInvites: PendingInvite[]
 }
 
 export function SettingsShell(props: SettingsData) {
@@ -122,9 +124,9 @@ export function SettingsShell(props: SettingsData) {
           <>
             <Text size={400} weight="semibold" block className={styles.sectionTitle}>Members</Text>
             <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalL }} block>
-              Manage members and their roles. Invite new users in Phase 11.
+              Manage members and their roles. Invite colleagues by email below.
             </Text>
-            <UsersSettingsPanel members={props.members} />
+            <UsersSettingsPanel members={props.members} pendingInvites={props.pendingInvites} />
           </>
         )}
       </div>

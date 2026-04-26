@@ -16,7 +16,7 @@ export default async function SettingsPage() {
   })
   if (!membership) redirect('/')
 
-  const [org, members] = await Promise.all([
+  const [org, members, invites] = await Promise.all([
     prisma.organization.findUnique({
       where: { id: orgId },
       include: { settings: true },
@@ -25,6 +25,10 @@ export default async function SettingsPage() {
       where: { organizationId: orgId },
       include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: 'asc' },
+    }),
+    prisma.invite.findMany({
+      where: { organizationId: orgId, status: 'pending' },
+      orderBy: { sentAt: 'desc' },
     }),
   ])
 
@@ -62,6 +66,13 @@ export default async function SettingsPage() {
             email: m.user.email ?? '',
             role: m.role,
             isCurrentUser: m.userId === session.user.id,
+          }))}
+          pendingInvites={invites.map((inv) => ({
+            id: inv.id,
+            email: inv.email,
+            role: inv.role,
+            sentAt: inv.sentAt,
+            expiresAt: inv.expiresAt,
           }))}
         />
       </div>

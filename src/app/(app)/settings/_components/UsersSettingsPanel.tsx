@@ -9,6 +9,8 @@ import {
 } from '@fluentui/react-components'
 import { PersonDeleteRegular } from '@fluentui/react-icons'
 import { changeMemberRole, removeMember } from '@/lib/actions/settings'
+import { InviteUserDialog } from './InviteUserDialog'
+import { PendingInvitesTable, type PendingInvite } from './PendingInvitesTable'
 
 const ROLE_COLORS: Record<string, 'warning' | 'success' | 'informative' | 'important'> = {
   owner: 'important', admin: 'warning', member: 'success', viewer: 'informative',
@@ -25,6 +27,7 @@ const useStyles = makeStyles({
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
     backgroundColor: tokens.colorNeutralBackground2,
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: tokens.spacingHorizontalL,
   },
   roleSelect: { minWidth: '120px' },
 })
@@ -40,11 +43,13 @@ export interface MemberRow {
 
 interface Props {
   members: MemberRow[]
+  pendingInvites: PendingInvite[]
 }
 
-export function UsersSettingsPanel({ members: initial }: Props) {
+export function UsersSettingsPanel({ members: initialMembers, pendingInvites: initialInvites }: Props) {
   const styles = useStyles()
-  const [members, setMembers] = useState<MemberRow[]>(initial)
+  const [members, setMembers] = useState<MemberRow[]>(initialMembers)
+  const [invites, setInvites] = useState<PendingInvite[]>(initialInvites)
   const [rolePending, setRolePending] = useState<string | null>(null)
   const [removePending, setRemovePending] = useState<string | null>(null)
   const [, startRoleTransition] = useTransition()
@@ -76,10 +81,13 @@ export function UsersSettingsPanel({ members: initial }: Props) {
     <div className={styles.root}>
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <Text size={300} weight="semibold">Members</Text>
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: 8 }}>
-            {members.length} member{members.length !== 1 ? 's' : ''}
-          </Text>
+          <div>
+            <Text size={300} weight="semibold">Members</Text>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: 0 }}>
+              {members.length} member{members.length !== 1 ? 's' : ''}
+            </Text>
+          </div>
+          <InviteUserDialog onInviteSent={() => {}} />
         </div>
         <Table>
           <TableHeader>
@@ -154,6 +162,8 @@ export function UsersSettingsPanel({ members: initial }: Props) {
           </TableBody>
         </Table>
       </div>
+
+      <PendingInvitesTable invites={invites} onInviteRevoked={() => {}} />
     </div>
   )
 }
