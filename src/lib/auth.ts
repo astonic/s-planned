@@ -2,6 +2,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import type { NextAuthOptions } from 'next-auth'
 import { prisma } from './db'
+import { logger } from './logger'
 
 export const authOptions: NextAuthOptions = {
   // CredentialsProvider requires JWT strategy — database strategy is not supported
@@ -18,7 +19,10 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        if (!credentials?.email || !credentials?.password) {
+          logger.warn('Login attempt with missing credentials', { email: credentials?.email })
+          return null
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
@@ -30,12 +34,23 @@ export const authOptions: NextAuthOptions = {
           },
         })
 
-        if (!user?.passwordHash) return null
+        if (!user?.passwordHash) {
+          logger.warn('Login attempt for non-existent user', { email: credentials.email })
+          return null
+        }
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
-        if (!valid) return null
+        if (!valid) {
+          logger.warn('Login attempt with invalid password', { userId: user.id, email: credentials.email })
+          return null
+        }
 
         const membership = user.memberships[0]
+        logger.info('User login successful', {
+          userId: user.id,
+          email: credentials.email,
+          orgId: membership?.organizationId,
+        })
 
         return {
           id: user.id,

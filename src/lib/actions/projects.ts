@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
+import { createLogger } from '@/lib/logger'
 import type { DeliverableStatus } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -36,10 +37,12 @@ const updateProjectSchema = z.object({
 export async function createProject(
   data: z.infer<typeof createProjectSchema>,
 ): Promise<ActionResult<{ id: string; name: string }>> {
+  let logger = createLogger()
   try {
     const auth = await requireAuth('member')
     const parsed = createProjectSchema.parse(data)
     const orgId = auth.orgId
+    logger = createLogger({ orgId, userId: auth.userId })
 
     const project = await withTenant(orgId, async (tx) => {
       // Create the project first
@@ -131,9 +134,15 @@ export async function createProject(
       return proj
     })
 
+    logger.info('Project created', {
+      projectId: project.id,
+      projectName: project.name,
+      templateUsed: !!parsed.templateId,
+    })
     revalidatePath('/projects')
     return { ok: true, data: project }
   } catch (e) {
+    logger.error('Failed to create project', { error: (e as Error).message })
     return { ok: false, error: (e as Error).message }
   }
 }
@@ -142,10 +151,12 @@ export async function updateProject(
   id: string,
   data: z.infer<typeof updateProjectSchema>,
 ): Promise<ActionResult> {
+  let logger = createLogger()
   try {
     const auth = await requireAuth('member')
     const parsed = updateProjectSchema.parse(data)
     const orgId = auth.orgId
+    logger = createLogger({ orgId, userId: auth.userId })
 
     await withTenant(orgId, async (tx) => {
       const project = await tx.project.update({
@@ -165,18 +176,22 @@ export async function updateProject(
       })
     })
 
+    logger.info('Project updated', { projectId: id })
     revalidatePath('/projects')
     revalidatePath(`/projects/${id}`)
     return { ok: true, data: undefined }
   } catch (e) {
+    logger.error('Failed to update project', { projectId: id, error: (e as Error).message })
     return { ok: false, error: (e as Error).message }
   }
 }
 
 export async function deleteProject(id: string): Promise<ActionResult> {
+  let logger = createLogger()
   try {
     const auth = await requireAuth('admin')
     const orgId = auth.orgId
+    logger = createLogger({ orgId, userId: auth.userId })
 
     await withTenant(orgId, async (tx) => {
       const project = await tx.project.findUnique({
@@ -198,9 +213,11 @@ export async function deleteProject(id: string): Promise<ActionResult> {
       await tx.project.delete({ where: { id, organizationId: orgId } })
     })
 
+    logger.info('Project deleted', { projectId: id })
     revalidatePath('/projects')
     return { ok: true, data: undefined }
   } catch (e) {
+    logger.error('Failed to delete project', { projectId: id, error: (e as Error).message })
     return { ok: false, error: (e as Error).message }
   }
 }
