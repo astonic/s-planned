@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { ProjectOverview } from './_components/ProjectOverview'
+import { ProjectTabs } from './_components/ProjectTabs'
 import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
 import type { ProjectPhase } from '@prisma/client'
@@ -97,30 +97,26 @@ export default async function ProjectDetailPage({ params }: Props) {
     },
   }
 
-  const [recentActivityRows, recentActivityTypes] = await Promise.all([
+  const [recentActivityRows, recentActivityTypes, decisionRows] = await Promise.all([
     prisma.auditEvent.findMany({
-      where: {
-        organizationId,
-        projectId: params.id,
-      },
+      where: { organizationId, projectId: params.id },
       orderBy: { createdAt: 'desc' },
       take: 21,
-      select: {
-        id: true,
-        actorName: true,
-        eventType: true,
-        description: true,
-        createdAt: true,
-      },
+      select: { id: true, actorName: true, eventType: true, description: true, createdAt: true },
     }),
     prisma.auditEvent.findMany({
-      where: {
-        organizationId,
-        projectId: params.id,
-      },
+      where: { organizationId, projectId: params.id },
       distinct: ['eventType'],
       select: { eventType: true },
       orderBy: { eventType: 'asc' },
+    }),
+    prisma.decision.findMany({
+      where: { projectId: params.id, organizationId },
+      orderBy: { loggedDate: 'desc' },
+      select: {
+        id: true, description: true, impact: true, loggedDate: true,
+        status: true, comments: true, loggedBy: true, createdAt: true,
+      },
     }),
   ])
 
@@ -137,25 +133,29 @@ export default async function ProjectDetailPage({ params }: Props) {
         ]}
         actions={<ProjectActions projectId={params.id} />}
       />
-      <ProjectOverview
+      <ProjectTabs
         projectId={params.id}
-        projectName={project.name}
-        projectStatus={project.status}
-        description={project.description}
-        templateName={project.template?.name ?? null}
-        startDate={project.startDate}
-        targetDate={project.targetDate}
-        createdAt={project.createdAt}
-        totalDeliverables={totalDeliverables}
-        closedDeliverables={closedDeliverables}
-        readinessPct={readinessPct}
-        byStatus={byStatus}
-        byFocusArea={byFocusArea}
-        byPhase={byPhase}
-        raidSummary={raidSummary}
-        recentActivity={recentActivity}
-        recentActivityHasMore={recentActivityHasMore}
-        activityEventTypes={recentActivityTypes.map((t) => t.eventType)}
+        decisions={decisionRows}
+        overview={{
+          projectId: params.id,
+          projectName: project.name,
+          projectStatus: project.status,
+          description: project.description,
+          templateName: project.template?.name ?? null,
+          startDate: project.startDate,
+          targetDate: project.targetDate,
+          createdAt: project.createdAt,
+          totalDeliverables,
+          closedDeliverables,
+          readinessPct,
+          byStatus,
+          byFocusArea,
+          byPhase,
+          raidSummary,
+          recentActivity,
+          recentActivityHasMore,
+          activityEventTypes: recentActivityTypes.map((t) => t.eventType),
+        }}
       />
     </>
   )

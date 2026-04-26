@@ -44,6 +44,8 @@ import { LinkRAIDDialog } from './LinkRAIDDialog'
 import type { RAIDItemSummary } from './LinkRAIDDialog'
 import { EvidenceTab } from './EvidenceTab'
 import type { EvidenceItem, EvidenceRequirementItem, CriteriaItem } from './EvidenceTab'
+import { NotesTab } from './NotesTab'
+import type { NoteItem } from './NotesTab'
 
 // Styles
 const useStyles = makeStyles({
@@ -235,6 +237,7 @@ interface Props {
   evidenceItems: EvidenceItem[]
   evidenceRequirements: EvidenceRequirementItem[]
   criteria: CriteriaItem[]
+  deliverableNotes: NoteItem[]
 }
 
 function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliverableId: string }) {
@@ -250,10 +253,10 @@ function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliv
   )
 }
 
-export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents, auditEventsHasMore, auditEventTypes, evidenceItems, evidenceRequirements, criteria }: Props) {
+export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents, auditEventsHasMore, auditEventTypes, evidenceItems, evidenceRequirements, criteria, deliverableNotes }: Props) {
   const styles = useStyles()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'details' | 'evidence' | 'activity' | 'raid'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'evidence' | 'notes' | 'activity' | 'raid'>('details')
   const [currentStatus, setCurrentStatus] = useState<DeliverableStatus>(deliverable.status)
   const [statusPending, startStatusTransition] = useTransition()
   function handleStatusChange(newStatus: DeliverableStatus) {
@@ -368,7 +371,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
             {new Date(deliverable.updatedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </Text>
         </div>
-        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'evidence' | 'activity' | 'raid')}>
+        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'evidence' | 'notes' | 'activity' | 'raid')}>
           <Tab value="details">Details</Tab>
           <Tab value="evidence">
             Evidence
@@ -377,6 +380,10 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                 {criteria.filter((c) => c.completion?.completed).length}/{criteria.length}
               </Badge>
             )}
+          </Tab>
+          <Tab value="notes">
+            Notes
+            {deliverableNotes.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{deliverableNotes.length}</Badge>}
           </Tab>
           <Tab value="activity">
             Activity
@@ -444,6 +451,11 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
               evidenceItems={evidenceItems}
               criteria={criteria}
             />
+          </div>
+        )}
+        {activeTab === 'notes' && (
+          <div className={styles.tabContent}>
+            <NotesTab deliverableId={deliverable.id} initialNotes={deliverableNotes} />
           </div>
         )}
         {activeTab === 'activity' && (

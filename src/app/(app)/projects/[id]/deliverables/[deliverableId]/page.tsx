@@ -53,6 +53,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
     criteriaCompletions,
     templateCriteria,
     evidenceRequirements,
+    noteRows,
   ] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
       where: { deliverableExecutionId: params.deliverableId },
@@ -119,6 +120,11 @@ export default async function DeliverableDetailPage({ params }: Props) {
           orderBy: { id: 'asc' },
         })
       : Promise.resolve([]),
+    prisma.deliverableNote.findMany({
+      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, text: true, authorName: true, createdAt: true },
+    }),
   ])
 
   const auditEvents = auditEventRows.slice(0, 20)
@@ -162,6 +168,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
           evidenceItems={evidenceItems}
           evidenceRequirements={evidenceRequirements}
           criteria={criteriaWithCompletions}
+          deliverableNotes={noteRows}
         />
       </div>
     </>

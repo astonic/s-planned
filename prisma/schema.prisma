@@ -280,6 +280,7 @@ model Project {
   focusAreaExecutions FocusAreaExecution[]
   auditEvents         AuditEvent[]
   raidItems           RAIDItem[]
+  decisions           Decision[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -350,6 +351,7 @@ model DeliverableExecution {
   ownerId             String?
   evidenceItems       Evidence[]
   criteriaCompletions CriteriaCompletion[]
+  deliverableNotes    DeliverableNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -562,4 +564,51 @@ model CriteriaCompletion {
   @@unique([deliverableExecutionId, acceptanceCriteriaId])
   @@index([deliverableExecutionId])
   @@map("criteria_completions")
+}
+
+// ── Phase 7: Notes & Decisions ────────────────────────────────────────────────
+
+model DeliverableNote {
+  id                     String   @id @default(uuid())
+  organizationId         String
+  deliverableExecutionId String
+  text                   String   @db.Text
+  authorName             String
+
+  deliverableExecution DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([deliverableExecutionId])
+  @@map("deliverable_notes")
+}
+
+enum DecisionStatus {
+  pending
+  approved
+  rejected
+  deferred
+}
+
+model Decision {
+  id             String         @id @default(uuid())
+  organizationId String
+  projectId      String
+  description    String         @db.Text
+  impact         String?        @db.Text
+  loggedDate     DateTime       @default(now())
+  status         DecisionStatus @default(pending)
+  comments       String?        @db.Text
+  loggedBy       String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("decisions")
 }
