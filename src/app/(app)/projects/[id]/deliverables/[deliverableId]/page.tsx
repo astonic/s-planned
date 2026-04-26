@@ -42,7 +42,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
   // Tenant check
   if (project.organizationId !== orgId) notFound()
 
-  const [linkedRAID, projectRAID, orgPeople, orgVendors] = await Promise.all([
+  const [linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
       where: { deliverableExecutionId: params.deliverableId },
       include: {
@@ -62,6 +62,21 @@ export default async function DeliverableDetailPage({ params }: Props) {
     prisma.vendor.findMany({
       where: { organizationId: orgId },
       orderBy: { name: 'asc' },
+    }),
+    prisma.auditEvent.findMany({
+      where: {
+        organizationId: orgId,
+        deliverableExecutionId: params.deliverableId,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        actorName: true,
+        eventType: true,
+        description: true,
+        createdAt: true,
+      },
     }),
   ])
 
@@ -84,6 +99,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
           projectRAID={projectRAID}
           orgPeople={orgPeople}
           orgVendors={orgVendors}
+          auditEvents={auditEvents}
         />
       </div>
     </>

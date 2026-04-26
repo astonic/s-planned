@@ -65,7 +65,7 @@ export async function createPerson(
     const orgId = session.currentOrganizationId
 
     const person = await withTenant(orgId, async (tx) => {
-      return tx.person.create({
+      const created = await tx.person.create({
         data: {
           organizationId: orgId,
           name: parsed.name,
@@ -77,6 +77,18 @@ export async function createPerson(
           notes: parsed.notes ?? null,
         },
       })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.person.created',
+          description: `Created person "${created.name}"`,
+          metadata: { personId: created.id, type: created.type, role: created.role },
+        },
+      })
+
+      return created
     })
 
     revalidatePath('/stakeholders')
@@ -98,11 +110,11 @@ export async function updatePerson(
     await withTenant(orgId, async (tx) => {
       const existing = await tx.person.findUnique({
         where: { id: personId, organizationId: orgId },
-        select: { id: true },
+        select: { id: true, name: true },
       })
       if (!existing) throw new Error('Person not found')
 
-      return tx.person.update({
+      await tx.person.update({
         where: { id: personId },
         data: {
           ...(parsed.name && { name: parsed.name }),
@@ -112,6 +124,16 @@ export async function updatePerson(
           ...(parsed.email !== undefined && { email: parsed.email || null }),
           ...(parsed.phone !== undefined && { phone: parsed.phone || null }),
           ...(parsed.notes !== undefined && { notes: parsed.notes || null }),
+        },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.person.updated',
+          description: `Updated person "${existing.name}"`,
+          metadata: { personId, changes: parsed },
         },
       })
     })
@@ -131,9 +153,20 @@ export async function deletePerson(personId: string): Promise<ActionResult> {
     await withTenant(orgId, async (tx) => {
       const existing = await tx.person.findUnique({
         where: { id: personId, organizationId: orgId },
-        select: { id: true },
+        select: { id: true, name: true },
       })
       if (!existing) throw new Error('Person not found')
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.person.deleted',
+          description: `Deleted person "${existing.name}"`,
+          metadata: { personId },
+        },
+      })
+
       await tx.person.delete({ where: { id: personId } })
     })
 
@@ -155,7 +188,7 @@ export async function createVendor(
     const orgId = session.currentOrganizationId
 
     const vendor = await withTenant(orgId, async (tx) => {
-      return tx.vendor.create({
+      const created = await tx.vendor.create({
         data: {
           organizationId: orgId,
           name: parsed.name,
@@ -169,6 +202,18 @@ export async function createVendor(
           notes: parsed.notes ?? null,
         },
       })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.vendor.created',
+          description: `Created vendor "${created.name}"`,
+          metadata: { vendorId: created.id, type: created.type },
+        },
+      })
+
+      return created
     })
 
     revalidatePath('/stakeholders')
@@ -190,11 +235,11 @@ export async function updateVendor(
     await withTenant(orgId, async (tx) => {
       const existing = await tx.vendor.findUnique({
         where: { id: vendorId, organizationId: orgId },
-        select: { id: true },
+        select: { id: true, name: true },
       })
       if (!existing) throw new Error('Vendor not found')
 
-      return tx.vendor.update({
+      await tx.vendor.update({
         where: { id: vendorId },
         data: {
           ...(parsed.name && { name: parsed.name }),
@@ -206,6 +251,16 @@ export async function updateVendor(
           ...(parsed.address !== undefined && { address: parsed.address || null }),
           ...(parsed.website !== undefined && { website: parsed.website || null }),
           ...(parsed.notes !== undefined && { notes: parsed.notes || null }),
+        },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.vendor.updated',
+          description: `Updated vendor "${existing.name}"`,
+          metadata: { vendorId, changes: parsed },
         },
       })
     })
@@ -225,9 +280,20 @@ export async function deleteVendor(vendorId: string): Promise<ActionResult> {
     await withTenant(orgId, async (tx) => {
       const existing = await tx.vendor.findUnique({
         where: { id: vendorId, organizationId: orgId },
-        select: { id: true },
+        select: { id: true, name: true },
       })
       if (!existing) throw new Error('Vendor not found')
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.vendor.deleted',
+          description: `Deleted vendor "${existing.name}"`,
+          metadata: { vendorId },
+        },
+      })
+
       await tx.vendor.delete({ where: { id: vendorId } })
     })
 
@@ -249,10 +315,45 @@ export async function linkPersonToDeliverable(
     const orgId = session.currentOrganizationId
 
     await withTenant(orgId, async (tx) => {
+      const [deliverable, person] = await Promise.all([
+        tx.deliverableExecution.findUnique({
+          where: { id: deliverableExecutionId, organizationId: orgId },
+          select: {
+            id: true,
+            name: true,
+            subSectionExecution: {
+              select: {
+                focusAreaExecution: {
+                  select: { projectId: true },
+                },
+              },
+            },
+          },
+        }),
+        tx.person.findUnique({
+          where: { id: personId, organizationId: orgId },
+          select: { id: true, name: true },
+        }),
+      ])
+      if (!deliverable) throw new Error('Deliverable not found')
+      if (!person) throw new Error('Person not found')
+
       await tx.deliverableExecutionPerson.upsert({
         where: { deliverableExecutionId_personId: { deliverableExecutionId, personId } },
         create: { deliverableExecutionId, personId },
         update: {},
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
+          deliverableExecutionId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.person.linked',
+          description: `Linked person "${person.name}" to deliverable "${deliverable.name}"`,
+          metadata: { personId, deliverableExecutionId },
+        },
       })
     })
 
@@ -272,8 +373,43 @@ export async function unlinkPersonFromDeliverable(
     const orgId = session.currentOrganizationId
 
     await withTenant(orgId, async (tx) => {
+      const [deliverable, person] = await Promise.all([
+        tx.deliverableExecution.findUnique({
+          where: { id: deliverableExecutionId, organizationId: orgId },
+          select: {
+            id: true,
+            name: true,
+            subSectionExecution: {
+              select: {
+                focusAreaExecution: {
+                  select: { projectId: true },
+                },
+              },
+            },
+          },
+        }),
+        tx.person.findUnique({
+          where: { id: personId, organizationId: orgId },
+          select: { id: true, name: true },
+        }),
+      ])
+      if (!deliverable) throw new Error('Deliverable not found')
+      if (!person) throw new Error('Person not found')
+
       await tx.deliverableExecutionPerson.deleteMany({
         where: { deliverableExecutionId, personId },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
+          deliverableExecutionId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.person.unlinked',
+          description: `Unlinked person "${person.name}" from deliverable "${deliverable.name}"`,
+          metadata: { personId, deliverableExecutionId },
+        },
       })
     })
 
@@ -293,9 +429,53 @@ export async function setDeliverableOwner(
     const orgId = session.currentOrganizationId
 
     await withTenant(orgId, async (tx) => {
+      const existing = await tx.deliverableExecution.findUnique({
+        where: { id: deliverableExecutionId, organizationId: orgId },
+        select: {
+          id: true,
+          name: true,
+          owner: { select: { id: true, name: true } },
+          subSectionExecution: {
+            select: {
+              focusAreaExecution: {
+                select: { projectId: true },
+              },
+            },
+          },
+        },
+      })
+      if (!existing) throw new Error('Deliverable not found')
+
+      let newOwnerName: string | null = null
+      if (personId) {
+        const owner = await tx.person.findUnique({
+          where: { id: personId, organizationId: orgId },
+          select: { name: true },
+        })
+        if (!owner) throw new Error('Person not found')
+        newOwnerName = owner.name
+      }
+
       await tx.deliverableExecution.update({
         where: { id: deliverableExecutionId, organizationId: orgId },
         data: { ownerId: personId },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId: existing.subSectionExecution.focusAreaExecution.projectId,
+          deliverableExecutionId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.owner.changed',
+          description: personId
+            ? `Set owner of deliverable "${existing.name}" to "${newOwnerName}"`
+            : `Cleared owner on deliverable "${existing.name}"`,
+          metadata: {
+            previousOwnerId: existing.owner?.id ?? null,
+            nextOwnerId: personId,
+          },
+        },
       })
     })
 
@@ -315,10 +495,45 @@ export async function linkVendorToDeliverable(
     const orgId = session.currentOrganizationId
 
     await withTenant(orgId, async (tx) => {
+      const [deliverable, vendor] = await Promise.all([
+        tx.deliverableExecution.findUnique({
+          where: { id: deliverableExecutionId, organizationId: orgId },
+          select: {
+            id: true,
+            name: true,
+            subSectionExecution: {
+              select: {
+                focusAreaExecution: {
+                  select: { projectId: true },
+                },
+              },
+            },
+          },
+        }),
+        tx.vendor.findUnique({
+          where: { id: vendorId, organizationId: orgId },
+          select: { id: true, name: true },
+        }),
+      ])
+      if (!deliverable) throw new Error('Deliverable not found')
+      if (!vendor) throw new Error('Vendor not found')
+
       await tx.deliverableExecutionVendor.upsert({
         where: { deliverableExecutionId_vendorId: { deliverableExecutionId, vendorId } },
         create: { deliverableExecutionId, vendorId },
         update: {},
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
+          deliverableExecutionId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.vendor.linked',
+          description: `Linked vendor "${vendor.name}" to deliverable "${deliverable.name}"`,
+          metadata: { vendorId, deliverableExecutionId },
+        },
       })
     })
 
@@ -338,8 +553,43 @@ export async function unlinkVendorFromDeliverable(
     const orgId = session.currentOrganizationId
 
     await withTenant(orgId, async (tx) => {
+      const [deliverable, vendor] = await Promise.all([
+        tx.deliverableExecution.findUnique({
+          where: { id: deliverableExecutionId, organizationId: orgId },
+          select: {
+            id: true,
+            name: true,
+            subSectionExecution: {
+              select: {
+                focusAreaExecution: {
+                  select: { projectId: true },
+                },
+              },
+            },
+          },
+        }),
+        tx.vendor.findUnique({
+          where: { id: vendorId, organizationId: orgId },
+          select: { id: true, name: true },
+        }),
+      ])
+      if (!deliverable) throw new Error('Deliverable not found')
+      if (!vendor) throw new Error('Vendor not found')
+
       await tx.deliverableExecutionVendor.deleteMany({
         where: { deliverableExecutionId, vendorId },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
+          deliverableExecutionId,
+          actorName: session.user.name,
+          eventType: 'stakeholder.vendor.unlinked',
+          description: `Unlinked vendor "${vendor.name}" from deliverable "${deliverable.name}"`,
+          metadata: { vendorId, deliverableExecutionId },
+        },
       })
     })
 

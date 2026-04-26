@@ -81,6 +81,24 @@ const useStyles = makeStyles({
   codeText: { fontFamily: 'monospace', fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
   idText: { fontFamily: 'monospace', fontSize: tokens.fontSizeBase100, color: tokens.colorNeutralForeground4, wordBreak: 'break-all' },
   datesGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: tokens.spacingHorizontalM },
+  activityList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
+  activityRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXXS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  activityMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacingHorizontalM,
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+  },
   activityPlaceholder: { color: tokens.colorNeutralForeground3, fontStyle: 'italic', padding: tokens.spacingVerticalM },
   raidHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   raidList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
@@ -178,6 +196,13 @@ interface Props {
   projectRAID: RAIDItemSummary[]
   orgPeople: Person[]
   orgVendors: Vendor[]
+  auditEvents: {
+    id: string
+    actorName: string
+    eventType: string
+    description: string
+    createdAt: Date
+  }[]
 }
 
 function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliverableId: string }) {
@@ -193,7 +218,7 @@ function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliv
   )
 }
 
-export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors }: Props) {
+export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents }: Props) {
   const styles = useStyles()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'raid'>('details')
@@ -263,7 +288,10 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
         </div>
         <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'activity' | 'raid')}>
           <Tab value="details">Details</Tab>
-          <Tab value="activity">Activity</Tab>
+          <Tab value="activity">
+            Activity
+            {auditEvents.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{auditEvents.length}</Badge>}
+          </Tab>
           <Tab value="raid">
             RAID
             {linkedRAID.length > 0 && <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: '6px' }}>{linkedRAID.length}</Badge>}
@@ -320,7 +348,32 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
         )}
         {activeTab === 'activity' && (
           <div className={styles.tabContent}>
-            <Text className={styles.activityPlaceholder}>Audit log coming in Phase 6.</Text>
+            {auditEvents.length === 0 ? (
+              <Text className={styles.activityPlaceholder}>No audit events yet for this deliverable.</Text>
+            ) : (
+              <div className={styles.activityList}>
+                {auditEvents.map((event) => (
+                  <div key={event.id} className={styles.activityRow}>
+                    <div className={styles.activityMeta}>
+                      <Text size={200}>{event.actorName}</Text>
+                      <Text size={200}>
+                        {new Date(event.createdAt).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </div>
+                    <Text weight="semibold">{event.description}</Text>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                      {event.eventType}
+                    </Text>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'raid' && (
