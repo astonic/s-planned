@@ -17,13 +17,20 @@ import {
   CardHeader,
   Divider,
   Field,
+  Button,
 } from '@fluentui/react-components'
 import type {
   DeliverableExecution,
   DeliverableStatus,
   ProjectPhase,
+  RAIDType,
+  RAIDSeverity,
+  RAIDStatus,
 } from '@prisma/client'
 import { updateDeliverableStatus, updateDeliverableField } from '@/lib/actions/projects'
+import { unlinkRAIDFromDeliverable } from '@/lib/actions/raid'
+import { LinkRAIDDialog } from './LinkRAIDDialog'
+import type { RAIDItemSummary } from './LinkRAIDDialog'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -120,6 +127,36 @@ const useStyles = makeStyles({
     fontStyle: 'italic',
     padding: tokens.spacingVerticalM,
   },
+  raidHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  raidList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+  },
+  raidRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  raidTitle: {
+    flex: 1,
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
+  },
+  raidEmpty: {
+    color: tokens.colorNeutralForeground3,
+    fontStyle: 'italic',
+    padding: tokens.spacingVerticalM,
+  },
 })
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -150,6 +187,48 @@ const PHASE_LABELS: Record<ProjectPhase, string> = {
   commissioning: 'Commissioning',
   ramp_up: 'Ramp Up',
   handover: 'Handover',
+}
+
+// ── RAID badge maps ───────────────────────────────────────────────────────────
+
+const RAID_TYPE_COLORS: Record<RAIDType, 'brand' | 'danger' | 'warning' | 'informative'> = {
+  risk: 'danger',
+  assumption: 'informative',
+  issue: 'warning',
+  dependency: 'brand',
+}
+
+const RAID_SEVERITY_COLORS: Record<RAIDSeverity, 'subtle' | 'warning' | 'danger' | 'severe'> = {
+  low: 'subtle',
+  medium: 'warning',
+  high: 'severe',
+  critical: 'danger',
+}
+
+const RAID_STATUS_COLORS: Record<RAIDStatus, 'informative' | 'brand' | 'success'> = {
+  open: 'informative',
+  in_progress: 'brand',
+  closed: 'success',
+}
+
+const RAID_TYPE_LABELS: Record<RAIDType, string> = {
+  risk: 'Risk',
+  assumption: 'Assumption',
+  issue: 'Issue',
+  dependency: 'Dependency',
+}
+
+const RAID_SEVERITY_LABELS: Record<RAIDSeverity, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical',
+}
+
+const RAID_STATUS_LABELS: Record<RAIDStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  closed: 'Closed',
 }
 
 // ── Inline editable field ─────────────────────────────────────────────────────
@@ -201,15 +280,64 @@ type DeliverableWithRelations = DeliverableExecution & {
   }
 }
 
+export interface LinkedRAIDItem {
+  raidItemId: string
+  deliverableExecutionId: string
+  raidItem: {
+    id: string
+    type: RAIDType
+    title: string
+    severity: RAIDSeverity
+    status: RAIDStatus
+  }
+}
+
 interface Props {
   deliverable: DeliverableWithRelations
   projectId: string
+  linkedRAID: LinkedRAIDItem[]
+  projectRAID: RAIDItemSummary[]
 }
 
-export function DeliverableDetail({ deliverable, projectId: _projectId }: Props) {
+function UnlinkButton({
+  raidItemId,
+  deliverableId,
+}: {
+  raidItemId: string
+  deliverableId: string
+}) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
+  function handleUnlink() {
+    startTransition(async () => {
+      await unlinkRAIDFromDeliverable(raidItemId, deliverableId)
+      router.refresh()
+    })
+  }
+
+  return (
+    <Button
+      size="small"
+      appearance="subtle"
+      disabled={isPending}
+      icon={isPending ? <Spinner size="tiny" /> : undefined}
+      onClick={handleUnlink}
+    >
+      Unlink
+    </Button>
+  )
+}
+
+export function DeliverableDetail({
+  deliverable,
+  projectId: _projectId,
+  linkedRAID,
+  projectRAID,
+}: Props) {
   const styles = useStyles()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'details' | 'activity'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'activity' | 'raid'>('details')
 
   // Status
   const [currentStatus, setCurrentStatus] = useState<DeliverableStatus>(deliverable.status)
@@ -306,10 +434,18 @@ export function DeliverableDetail({ deliverable, projectId: _projectId }: Props)
         {/* Tabs */}
         <TabList
           selectedValue={activeTab}
-          onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'activity')}
+          onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'activity' | 'raid')}
         >
           <Tab value="details">Details</Tab>
           <Tab value="activity">Activity</Tab>
+          <Tab value="raid">
+            RAID
+            {linkedRAID.length > 0 && (
+              <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: '6px' }}>
+                {linkedRAID.length}
+              </Badge>
+            )}
+          </Tab>
         </TabList>
 
         {/* Details tab */}
@@ -407,6 +543,47 @@ export function DeliverableDetail({ deliverable, projectId: _projectId }: Props)
             <Text className={styles.activityPlaceholder}>
               Audit log coming in Phase 6.
             </Text>
+          </div>
+        )}
+
+        {/* RAID tab */}
+        {activeTab === 'raid' && (
+          <div className={styles.tabContent}>
+            <div className={styles.raidHeader}>
+              <Text size={300} weight="semibold">Linked RAID Items</Text>
+              <LinkRAIDDialog
+                deliverableId={deliverable.id}
+                projectRAID={projectRAID}
+                linkedIds={new Set(linkedRAID.map((l) => l.raidItem.id))}
+              />
+            </div>
+
+            {linkedRAID.length === 0 ? (
+              <Text className={styles.raidEmpty}>
+                No RAID items linked. Use &quot;Link RAID Item&quot; to associate risks, assumptions, issues, or dependencies.
+              </Text>
+            ) : (
+              <div className={styles.raidList}>
+                {linkedRAID.map((link) => {
+                  const item = link.raidItem
+                  return (
+                    <div key={item.id} className={styles.raidRow}>
+                      <Badge appearance="tint" color={RAID_TYPE_COLORS[item.type]} size="small">
+                        {RAID_TYPE_LABELS[item.type]}
+                      </Badge>
+                      <Badge appearance="tint" color={RAID_SEVERITY_COLORS[item.severity]} size="small">
+                        {RAID_SEVERITY_LABELS[item.severity]}
+                      </Badge>
+                      <Text className={styles.raidTitle}>{item.title}</Text>
+                      <Badge appearance="tint" color={RAID_STATUS_COLORS[item.status]} size="small">
+                        {RAID_STATUS_LABELS[item.status]}
+                      </Badge>
+                      <UnlinkButton raidItemId={item.id} deliverableId={deliverable.id} />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

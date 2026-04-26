@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectOverview } from './_components/ProjectOverview'
-import type { FocusAreaStat, PhaseCounts } from './_components/ProjectOverview'
+import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
 import type { ProjectPhase } from '@prisma/client'
 
 interface Props {
@@ -81,6 +81,24 @@ export default async function ProjectDetailPage({ params }: Props) {
     }
   }
 
+  // ── RAID summary ─────────────────────────────────────────────────────────────
+  const raidItems = await prisma.rAIDItem.findMany({
+    where: { projectId: params.id },
+    select: { type: true, status: true, severity: true },
+  })
+
+  const raidSummary: RAIDSummary = {
+    total: raidItems.length,
+    openRisks: raidItems.filter((r) => r.type === 'risk' && r.status !== 'closed').length,
+    criticalCount: raidItems.filter((r) => r.severity === 'critical' && r.status !== 'closed').length,
+    byType: {
+      risk: raidItems.filter((r) => r.type === 'risk').length,
+      assumption: raidItems.filter((r) => r.type === 'assumption').length,
+      issue: raidItems.filter((r) => r.type === 'issue').length,
+      dependency: raidItems.filter((r) => r.type === 'dependency').length,
+    },
+  }
+
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const actions = (
@@ -109,6 +127,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         actions={actions}
       />
       <ProjectOverview
+        projectId={params.id}
         projectName={project.name}
         projectStatus={project.status}
         description={project.description}
@@ -122,6 +141,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         byStatus={byStatus}
         byFocusArea={byFocusArea}
         byPhase={byPhase}
+        raidSummary={raidSummary}
       />
     </>
   )

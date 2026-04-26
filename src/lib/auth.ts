@@ -1,12 +1,11 @@
-import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import type { NextAuthOptions } from 'next-auth'
 import { prisma } from './db'
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  session: { strategy: 'database' },
+  // CredentialsProvider requires JWT strategy — database strategy is not supported
+  session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
     error: '/login',
@@ -23,6 +22,12 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: {
+            memberships: {
+              orderBy: { createdAt: 'asc' },
+              take: 1,
+            },
+          },
         })
 
         if (!user?.passwordHash) return null
@@ -30,32 +35,41 @@ export const authOptions: NextAuthOptions = {
         const valid = await bcrypt.compare(credentials.password, user.passwordHash)
         if (!valid) return null
 
+        const membership = user.memberships[0]
+
         return {
           id: user.id,
           email: user.email ?? '',
           name: user.name ?? '',
           image: user.image ?? null,
+          currentOrganizationId: membership?.organizationId ?? '',
+          role: membership?.role ?? 'viewer',
         }
       },
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      const membership = await prisma.organizationMembership.findFirst({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'asc' },
-      })
-
+    async jwt({ token, user }) {
+      // On sign-in, persist org info into the JWT
+      if (user) {
+        token.id = user.id
+        token.currentOrganizationId = (user as { currentOrganizationId?: string }).currentOrganizationId ?? ''
+        token.role = (user as { role?: string }).role ?? 'viewer'
+        token.avatarUrl = user.image ?? null
+      }
+      return token
+    },
+    async session({ session, token }) {
       return {
         ...session,
         user: {
-          id: user.id,
-          name: user.name ?? '',
-          email: user.email ?? '',
-          avatarUrl: (user as { image?: string | null }).image ?? null,
+          id: token.id as string,
+          name: token.name ?? '',
+          email: token.email ?? '',
+          avatarUrl: (token.avatarUrl as string | null) ?? null,
         },
-        currentOrganizationId: membership?.organizationId ?? '',
-        role: (membership?.role ?? 'viewer') as 'owner' | 'admin' | 'member' | 'viewer',
+        currentOrganizationId: (token.currentOrganizationId as string) ?? '',
+        role: (token.role as 'owner' | 'admin' | 'member' | 'viewer') ?? 'viewer',
       }
     },
   },

@@ -277,6 +277,7 @@ model Project {
   template            Template?            @relation(fields: [templateId], references: [id], onDelete: SetNull)
   focusAreaExecutions FocusAreaExecution[]
   auditEvents         AuditEvent[]
+  raidItems           RAIDItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -338,8 +339,9 @@ model DeliverableExecution {
   closedAt   DateTime?
   notes      String?   @db.Text
 
-  subSectionExecution SubSectionExecution @relation(fields: [subSectionExecutionId], references: [id], onDelete: Cascade)
+  subSectionExecution SubSectionExecution  @relation(fields: [subSectionExecutionId], references: [id], onDelete: Cascade)
   auditEvents         AuditEvent[]
+  raidLinks           RAIDItemDeliverable[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -347,4 +349,71 @@ model DeliverableExecution {
   @@index([organizationId])
   @@index([subSectionExecutionId])
   @@map("deliverable_executions")
+}
+
+// ── Phase 4: RAID Log ─────────────────────────────────────────────────────────
+
+enum RAIDType {
+  risk
+  assumption
+  issue
+  dependency
+}
+
+enum RAIDSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum RAIDLikelihood {
+  rare
+  unlikely
+  possible
+  likely
+  almost_certain
+}
+
+enum RAIDStatus {
+  open
+  in_progress
+  closed
+}
+
+model RAIDItem {
+  id             String        @id @default(uuid())
+  organizationId String
+  projectId      String
+  type           RAIDType
+  title          String
+  description    String?
+  severity       RAIDSeverity  @default(medium)
+  likelihood     RAIDLikelihood?
+  status         RAIDStatus    @default(open)
+  owner          String?
+  dueDate        DateTime?
+  mitigationPlan String?       @db.Text
+  closedAt       DateTime?
+
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliverables   RAIDItemDeliverable[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("raid_items")
+}
+
+model RAIDItemDeliverable {
+  raidItemId           String
+  deliverableExecutionId String
+
+  raidItem             RAIDItem             @relation(fields: [raidItemId], references: [id], onDelete: Cascade)
+  deliverableExecution DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+
+  @@id([raidItemId, deliverableExecutionId])
+  @@map("raid_item_deliverables")
 }

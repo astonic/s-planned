@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {
   makeStyles,
   tokens,
@@ -28,6 +29,18 @@ export interface PhaseCounts {
   handover: number
 }
 
+export interface RAIDSummary {
+  total: number
+  openRisks: number
+  criticalCount: number
+  byType: {
+    risk: number
+    assumption: number
+    issue: number
+    dependency: number
+  }
+}
+
 export interface ProjectOverviewProps {
   projectName: string
   projectStatus: ProjectStatus
@@ -42,6 +55,8 @@ export interface ProjectOverviewProps {
   byStatus: { planned: number; in_progress: number; delayed: number; closed: number }
   byFocusArea: FocusAreaStat[]
   byPhase: PhaseCounts
+  projectId: string
+  raidSummary: RAIDSummary
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -187,6 +202,61 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
   },
 
+  // RAID summary
+  raidRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: tokens.spacingHorizontalM,
+  },
+  raidCard: {
+    padding: tokens.spacingVerticalL,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+  },
+  raidLabel: {
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.04em',
+  },
+  raidValue: {
+    fontSize: tokens.fontSizeHero700,
+    fontWeight: tokens.fontWeightSemibold,
+    lineHeight: '1',
+    color: tokens.colorNeutralForeground1,
+  },
+  raidSectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalM,
+    marginBottom: tokens.spacingVerticalM,
+  },
+  raidViewAll: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorBrandForeground1,
+    textDecoration: 'none',
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  raidAlert: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    backgroundColor: tokens.colorStatusDangerBackground1,
+    border: `1px solid ${tokens.colorStatusDangerBorderActive}`,
+    borderRadius: tokens.borderRadiusMedium,
+    color: tokens.colorStatusDangerForeground1,
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  raidAlertLink: {
+    color: tokens.colorStatusDangerForeground1,
+    fontWeight: tokens.fontWeightSemibold,
+    marginLeft: tokens.spacingHorizontalXS,
+  },
+
   // Metadata section
   metaCard: {
     padding: tokens.spacingVerticalL,
@@ -303,6 +373,8 @@ export function ProjectOverview({
   byStatus,
   byFocusArea,
   byPhase,
+  projectId,
+  raidSummary,
 }: ProjectOverviewProps) {
   const styles = useStyles()
   const statusCfg = STATUS_CONFIG[projectStatus]
@@ -429,6 +501,61 @@ export function ProjectOverview({
               </div>
             </Card>
           ))}
+        </div>
+      </div>
+
+      {/* ── RAID Summary ─────────────────────────────────────────────────────── */}
+      <div>
+        <div className={styles.raidSectionHeader}>
+          <Text size={400} weight="semibold" className={styles.sectionTitle}>
+            RAID Summary
+          </Text>
+          <Link href={`/projects/${projectId}/raid`} className={styles.raidViewAll}>
+            View all →
+          </Link>
+        </div>
+
+        {raidSummary.criticalCount > 0 && (
+          <div className={styles.raidAlert} style={{ marginBottom: tokens.spacingVerticalM }}>
+            ⚠ {raidSummary.criticalCount} critical open RAID item{raidSummary.criticalCount !== 1 ? 's' : ''} require attention —{' '}
+            <Link href={`/projects/${projectId}/raid`} className={styles.raidAlertLink}>
+              View RAID log
+            </Link>
+          </div>
+        )}
+
+        <div className={styles.raidRow}>
+          <Card>
+            <div className={styles.raidCard}>
+              <Text className={styles.raidLabel}>Open Risks</Text>
+              <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+                <Text className={styles.raidValue}>{raidSummary.openRisks}</Text>
+                {raidSummary.openRisks > 0 && (
+                  <Badge appearance="filled" color="danger" size="medium">
+                    {raidSummary.openRisks}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </Card>
+          <Card>
+            <div className={styles.raidCard}>
+              <Text className={styles.raidLabel}>Assumptions</Text>
+              <Text className={styles.raidValue}>{raidSummary.byType.assumption}</Text>
+            </div>
+          </Card>
+          <Card>
+            <div className={styles.raidCard}>
+              <Text className={styles.raidLabel}>Issues</Text>
+              <Text className={styles.raidValue}>{raidSummary.byType.issue}</Text>
+            </div>
+          </Card>
+          <Card>
+            <div className={styles.raidCard}>
+              <Text className={styles.raidLabel}>Dependencies</Text>
+              <Text className={styles.raidValue}>{raidSummary.byType.dependency}</Text>
+            </div>
+          </Card>
         </div>
       </div>
 

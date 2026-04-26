@@ -39,6 +39,21 @@ export default async function DeliverableDetailPage({ params }: Props) {
   // Tenant check
   if (project.organizationId !== orgId) notFound()
 
+  const [linkedRAID, projectRAID] = await Promise.all([
+    prisma.rAIDItemDeliverable.findMany({
+      where: { deliverableExecutionId: params.deliverableId },
+      include: {
+        raidItem: {
+          select: { id: true, type: true, title: true, severity: true, status: true },
+        },
+      },
+    }),
+    prisma.rAIDItem.findMany({
+      where: { projectId: project.id },
+      select: { id: true, type: true, title: true, severity: true, status: true },
+    }),
+  ])
+
   return (
     <>
       <PageHeader
@@ -51,7 +66,12 @@ export default async function DeliverableDetailPage({ params }: Props) {
         ]}
       />
       <div style={{ padding: '24px' }}>
-        <DeliverableDetail deliverable={deliverable} projectId={project.id} />
+        <DeliverableDetail
+          deliverable={deliverable}
+          projectId={project.id}
+          linkedRAID={linkedRAID}
+          projectRAID={projectRAID}
+        />
       </div>
     </>
   )
