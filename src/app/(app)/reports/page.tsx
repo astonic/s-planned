@@ -4,16 +4,28 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { ReportListClient } from './_components/ReportListClient'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 
-export default async function ReportsPage() {
+const PAGE_SIZE = 25
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string }
+}) {
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
   const orgId = session.currentOrganizationId
 
-  const [reports, projects] = await Promise.all([
+  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const skip = (page - 1) * PAGE_SIZE
+
+  const [reports, total, projects] = await Promise.all([
     prisma.report.findMany({
       where: { organizationId: orgId },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: PAGE_SIZE,
       select: {
         id: true, title: true, reportType: true, status: true,
         createdBy: true, publishedAt: true, createdAt: true,
@@ -22,6 +34,7 @@ export default async function ReportsPage() {
         _count: { select: { accessLog: true } },
       },
     }),
+    prisma.report.count({ where: { organizationId: orgId } }),
     prisma.project.findMany({
       where: { organizationId: orgId },
       select: { id: true, name: true },
@@ -47,6 +60,7 @@ export default async function ReportsPage() {
       <PageHeader title="Reports" />
       <div style={{ padding: '24px' }}>
         <ReportListClient reports={reportCards} projects={projects} />
+        <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} />
       </div>
     </>
   )

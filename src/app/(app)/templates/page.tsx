@@ -5,20 +5,34 @@ import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { TemplateCard } from './_components/TemplateCard'
 import { CreateTemplateDialog } from './_components/CreateTemplateDialog'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 
-export default async function TemplatesPage() {
+const PAGE_SIZE = 24
+
+export default async function TemplatesPage({
+  searchParams,
+}: {
+  searchParams: { page?: string }
+}) {
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
   const orgId = session.currentOrganizationId
+  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const skip = (page - 1) * PAGE_SIZE
 
-  const templates = await prisma.template.findMany({
-    where: { organizationId: orgId, isArchived: false },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: { select: { focusAreas: true } },
-    },
-  })
+  const [templates, total] = await Promise.all([
+    prisma.template.findMany({
+      where: { organizationId: orgId, isArchived: false },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: PAGE_SIZE,
+      include: {
+        _count: { select: { focusAreas: true } },
+      },
+    }),
+    prisma.template.count({ where: { organizationId: orgId, isArchived: false } }),
+  ])
 
   return (
     <>
@@ -42,17 +56,20 @@ export default async function TemplatesPage() {
             </p>
           </div>
         ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-              gap: '16px',
-            }}
-          >
-            {templates.map((template) => (
-              <TemplateCard key={template.id} template={template} />
-            ))}
-          </div>
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gap: '16px',
+              }}
+            >
+              {templates.map((template) => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+            <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} />
+          </>
         )}
       </div>
     </>

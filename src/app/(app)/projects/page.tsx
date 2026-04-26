@@ -6,30 +6,44 @@ import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectCard } from './_components/ProjectCard'
 import { NewProjectButton } from './_components/NewProjectButton'
+import { PaginationBar } from '@/components/ui/PaginationBar'
 import type { ProjectCardData } from './_components/ProjectCard'
 
-export default async function ProjectsPage() {
+const PAGE_SIZE = 20
+
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string }
+}) {
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
   const orgId = session.currentOrganizationId
+  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const skip = (page - 1) * PAGE_SIZE
 
-  const rawProjects = await prisma.project.findMany({
-    where: { organizationId: orgId },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      template: { select: { name: true } },
-      focusAreaExecutions: {
-        include: {
-          subSections: {
-            include: {
-              deliverables: { select: { status: true } },
+  const [rawProjects, total] = await Promise.all([
+    prisma.project.findMany({
+      where: { organizationId: orgId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: PAGE_SIZE,
+      include: {
+        template: { select: { name: true } },
+        focusAreaExecutions: {
+          include: {
+            subSections: {
+              include: {
+                deliverables: { select: { status: true } },
+              },
             },
           },
         },
       },
-    },
-  })
+    }),
+    prisma.project.count({ where: { organizationId: orgId } }),
+  ])
 
   const projects: ProjectCardData[] = rawProjects.map((p) => {
     const allDeliverables = p.focusAreaExecutions.flatMap((fa) =>
@@ -68,11 +82,14 @@ export default async function ProjectsPage() {
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 16 }}>
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 16 }}>
+              {projects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+            <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} />
+          </>
         )}
       </div>
     </>
