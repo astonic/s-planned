@@ -320,3 +320,138 @@ export async function updateDeliverableField(
     return { ok: false, error: (e as Error).message }
   }
 }
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+export interface SearchDeliverableResult {
+  id: string
+  name: string
+  code: string
+  description: string | null
+  status: string
+  phase: string | null
+}
+
+export async function searchDeliverables(
+  projectId: string,
+  query: string,
+): Promise<ActionResult<SearchDeliverableResult[]>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const logger = createLogger({ orgId, userId: auth.userId })
+
+    const results = await withTenant(orgId, async (tx) => {
+      // Verify project exists and user has access
+      const project = await tx.project.findUnique({
+        where: { id: projectId, organizationId: orgId },
+        select: { id: true },
+      })
+      if (!project) throw new Error('Project not found')
+
+      // Case-insensitive search on name, code, description using ilike
+      const deliverables = await tx.deliverableExecution.findMany({
+        where: {
+          organizationId: orgId,
+          subSectionExecution: {
+            focusAreaExecution: { projectId },
+          },
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { code: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          status: true,
+          phase: true,
+        },
+        orderBy: { name: 'asc' },
+        take: 50, // Limit results
+      })
+
+      return deliverables.map((d) => ({
+        id: d.id,
+        name: d.name,
+        code: d.code,
+        description: d.description,
+        status: d.status,
+        phase: d.phase,
+      }))
+    })
+
+    logger.info('Searched deliverables', { projectId, query, count: results.length })
+    return { ok: true, data: results }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+export interface SearchRAIDResult {
+  id: string
+  type: string
+  title: string
+  description: string | null
+  status: string
+  severity: string
+}
+
+export async function searchRAIDItems(
+  projectId: string,
+  query: string,
+): Promise<ActionResult<SearchRAIDResult[]>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const logger = createLogger({ orgId, userId: auth.userId })
+
+    const results = await withTenant(orgId, async (tx) => {
+      // Verify project exists
+      const project = await tx.project.findUnique({
+        where: { id: projectId, organizationId: orgId },
+        select: { id: true },
+      })
+      if (!project) throw new Error('Project not found')
+
+      // Search by title and description
+      const raidItems = await tx.rAIDItem.findMany({
+        where: {
+          organizationId: orgId,
+          projectId,
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { description: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          description: true,
+          status: true,
+          severity: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      })
+
+      return raidItems.map((r) => ({
+        id: r.id,
+        type: r.type,
+        title: r.title,
+        description: r.description,
+        status: r.status,
+        severity: r.severity,
+      }))
+    })
+
+    logger.info('Searched RAID items', { projectId, query, count: results.length })
+    return { ok: true, data: results }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
