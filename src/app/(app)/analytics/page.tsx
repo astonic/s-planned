@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { AnalyticsTabs } from './_components/AnalyticsTabs'
-import { buildAnalytics } from '@/app/api/analytics/route'
+import { buildAnalytics } from '@/lib/analytics'
 
 export default async function AnalyticsPage() {
   const session = await getServerSession(authOptions)

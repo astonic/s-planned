@@ -35,8 +35,10 @@ export class LocalStorageAdapter implements StorageService {
 
   /** Resolve and validate the path to prevent directory traversal */
   private resolve(storagePath: string): string {
-    const abs = path.resolve(STORAGE_ROOT, storagePath)
-    if (!abs.startsWith(path.resolve(STORAGE_ROOT))) {
+    const root = path.resolve(STORAGE_ROOT)
+    const abs = path.resolve(root, storagePath)
+    const relative = path.relative(root, abs)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
       throw new Error('Invalid storage path')
     }
     return abs

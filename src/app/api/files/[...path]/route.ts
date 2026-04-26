@@ -24,8 +24,10 @@ export async function GET(
   }
 
   // Prevent path traversal
-  const absPath = path.resolve(STORAGE_ROOT, filePath)
-  if (!absPath.startsWith(path.resolve(STORAGE_ROOT))) {
+  const root = path.resolve(STORAGE_ROOT)
+  const absPath = path.resolve(root, filePath)
+  const relativePath = path.relative(root, absPath)
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return new NextResponse('Forbidden', { status: 403 })
   }
 
@@ -36,6 +38,7 @@ export async function GET(
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,
+        'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'private, max-age=3600',
       },
     })

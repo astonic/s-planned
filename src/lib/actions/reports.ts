@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import type { ReportType } from '@prisma/client'
-import { buildAnalytics } from '@/app/api/analytics/route'
+import { buildAnalytics } from '@/lib/analytics'
 import { requireAuth } from '@/lib/security'
 
 type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
