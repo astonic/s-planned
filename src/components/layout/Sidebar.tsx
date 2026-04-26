@@ -15,6 +15,7 @@ import {
   ChevronDoubleRightRegular,
 } from '@fluentui/react-icons'
 import { useSidebar } from './SidebarContext'
+import { OrganizationSwitcher } from './OrganizationSwitcher'
 
 const useStyles = makeStyles({
   sidebar: {
@@ -130,10 +131,11 @@ const NAV_ITEMS = [
 interface SidebarProps {
   userName: string
   orgName: string
+  orgSlug: string
   avatarUrl?: string | null
 }
 
-export function Sidebar({ userName, orgName, avatarUrl }: SidebarProps) {
+export function Sidebar({ userName, orgName, orgSlug, avatarUrl }: SidebarProps) {
   const styles = useStyles()
   const pathname = usePathname()
   const { state, toggle } = useSidebar()
@@ -209,9 +211,7 @@ export function Sidebar({ userName, orgName, avatarUrl }: SidebarProps) {
         {!isCollapsed && (
           <div className={styles.footerText}>
             <Text size={200} weight="semibold" className={styles.userName}>{userName}</Text>
-            <Text size={100} className={styles.orgName} style={{ color: tokens.colorNeutralForeground3 }}>
-              {orgName}
-            </Text>
+            <OrganizationSwitcher currentOrgName={orgName} currentOrgSlug={orgSlug} />
           </div>
         )}
       </div>
