@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useMemo, useState } from 'react'
 import {
   makeStyles,
   tokens,
@@ -9,6 +10,8 @@ import {
   Text,
   Badge,
   ProgressBar,
+  Input,
+  Select,
 } from '@fluentui/react-components'
 import type { ProjectStatus, ProjectPhase } from '@prisma/client'
 
@@ -307,6 +310,16 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
   },
+  activityFilters: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: tokens.spacingVerticalM,
+  },
+  activitySearch: {
+    width: '320px',
+  },
   activityRow: {
     display: 'flex',
     flexDirection: 'column',
@@ -419,6 +432,27 @@ export function ProjectOverview({
   const statusCfg = STATUS_CONFIG[projectStatus]
   const openItems = byStatus.planned + byStatus.in_progress + byStatus.delayed
   const readColor = readinessColor(readinessPct)
+
+  const [activityQuery, setActivityQuery] = useState('')
+  const [activityType, setActivityType] = useState('all')
+
+  const activityTypes = useMemo(
+    () => Array.from(new Set(recentActivity.map((event) => event.eventType))).sort(),
+    [recentActivity]
+  )
+
+  const filteredRecentActivity = useMemo(() => {
+    const q = activityQuery.trim().toLowerCase()
+    return recentActivity.filter((event) => {
+      if (activityType !== 'all' && event.eventType !== activityType) return false
+      if (!q) return true
+      return (
+        event.actorName.toLowerCase().includes(q) ||
+        event.description.toLowerCase().includes(q) ||
+        event.eventType.toLowerCase().includes(q)
+      )
+    })
+  }, [recentActivity, activityQuery, activityType])
 
   return (
     <div className={styles.root}>
@@ -607,28 +641,54 @@ export function ProjectOverview({
           {recentActivity.length === 0 ? (
             <Text className={styles.activityEmpty}>No activity recorded yet for this project.</Text>
           ) : (
-            <div className={styles.activityList}>
-              {recentActivity.map((event) => (
-                <div key={event.id} className={styles.activityRow}>
-                  <div className={styles.activityMeta}>
-                    <Text size={200}>{event.actorName}</Text>
-                    <Text size={200}>
-                      {new Date(event.createdAt).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
-                  </div>
-                  <Text weight="semibold">{event.description}</Text>
-                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    {event.eventType}
-                  </Text>
+            <>
+              <div className={styles.activityFilters}>
+                <Input
+                  className={styles.activitySearch}
+                  placeholder="Search activity"
+                  value={activityQuery}
+                  onChange={(_, data) => setActivityQuery(data.value)}
+                />
+                <Select
+                  value={activityType}
+                  onChange={(_, data) => setActivityType(data.value)}
+                >
+                  <option value="all">All Event Types</option>
+                  {activityTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              {filteredRecentActivity.length === 0 ? (
+                <Text className={styles.activityEmpty}>No activity matches the current filters.</Text>
+              ) : (
+                <div className={styles.activityList}>
+                  {filteredRecentActivity.map((event) => (
+                    <div key={event.id} className={styles.activityRow}>
+                      <div className={styles.activityMeta}>
+                        <Text size={200}>{event.actorName}</Text>
+                        <Text size={200}>
+                          {new Date(event.createdAt).toLocaleString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      </div>
+                      <Text weight="semibold">{event.description}</Text>
+                      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                        {event.eventType}
+                      </Text>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </Card>
       </div>

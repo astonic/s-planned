@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   makeStyles,
@@ -98,6 +98,15 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     color: tokens.colorNeutralForeground3,
     fontSize: tokens.fontSizeBase200,
+  },
+  activityFilters: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  activitySearch: {
+    width: '320px',
   },
   activityPlaceholder: { color: tokens.colorNeutralForeground3, fontStyle: 'italic', padding: tokens.spacingVerticalM },
   raidHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -271,6 +280,27 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
   const availablePeople = orgPeople.filter((p) => !linkedPersonIds.has(p.id))
   const availableVendors = orgVendors.filter((v) => !linkedVendorIds.has(v.id))
 
+  const [activityQuery, setActivityQuery] = useState('')
+  const [activityType, setActivityType] = useState('all')
+
+  const activityTypes = useMemo(
+    () => Array.from(new Set(auditEvents.map((event) => event.eventType))).sort(),
+    [auditEvents]
+  )
+
+  const filteredAuditEvents = useMemo(() => {
+    const q = activityQuery.trim().toLowerCase()
+    return auditEvents.filter((event) => {
+      if (activityType !== 'all' && event.eventType !== activityType) return false
+      if (!q) return true
+      return (
+        event.actorName.toLowerCase().includes(q) ||
+        event.description.toLowerCase().includes(q) ||
+        event.eventType.toLowerCase().includes(q)
+      )
+    })
+  }, [auditEvents, activityQuery, activityType])
+
   return (
     <div className={styles.layout}>
       <div className={styles.leftPanel}>
@@ -351,28 +381,54 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
             {auditEvents.length === 0 ? (
               <Text className={styles.activityPlaceholder}>No audit events yet for this deliverable.</Text>
             ) : (
-              <div className={styles.activityList}>
-                {auditEvents.map((event) => (
-                  <div key={event.id} className={styles.activityRow}>
-                    <div className={styles.activityMeta}>
-                      <Text size={200}>{event.actorName}</Text>
-                      <Text size={200}>
-                        {new Date(event.createdAt).toLocaleString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Text>
-                    </div>
-                    <Text weight="semibold">{event.description}</Text>
-                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                      {event.eventType}
-                    </Text>
+              <>
+                <div className={styles.activityFilters}>
+                  <Input
+                    className={styles.activitySearch}
+                    placeholder="Search activity"
+                    value={activityQuery}
+                    onChange={(_, data) => setActivityQuery(data.value)}
+                  />
+                  <Select
+                    value={activityType}
+                    onChange={(_, data) => setActivityType(data.value)}
+                  >
+                    <option value="all">All Event Types</option>
+                    {activityTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {filteredAuditEvents.length === 0 ? (
+                  <Text className={styles.activityPlaceholder}>No activity matches the current filters.</Text>
+                ) : (
+                  <div className={styles.activityList}>
+                    {filteredAuditEvents.map((event) => (
+                      <div key={event.id} className={styles.activityRow}>
+                        <div className={styles.activityMeta}>
+                          <Text size={200}>{event.actorName}</Text>
+                          <Text size={200}>
+                            {new Date(event.createdAt).toLocaleString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </div>
+                        <Text weight="semibold">{event.description}</Text>
+                        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                          {event.eventType}
+                        </Text>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}
