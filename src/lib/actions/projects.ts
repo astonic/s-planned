@@ -1,12 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth } from '@/lib/security'
 import type { DeliverableStatus } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -14,14 +12,6 @@ import type { DeliverableStatus } from '@prisma/client'
 export type ActionResult<T = void> =
   | { ok: true; data: T }
   | { ok: false; error: string }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function requireSession() {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) redirect('/login')
-  return session
-}
 
 // ── Validation schemas ────────────────────────────────────────────────────────
 
@@ -47,9 +37,9 @@ export async function createProject(
   data: z.infer<typeof createProjectSchema>,
 ): Promise<ActionResult<{ id: string; name: string }>> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = createProjectSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const project = await withTenant(orgId, async (tx) => {
       // Create the project first
@@ -131,7 +121,7 @@ export async function createProject(
         data: {
           organizationId: orgId,
           projectId: proj.id,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'project.created',
           description: `Created project "${proj.name}"`,
           metadata: parsed.templateId ? { templateId: parsed.templateId } : undefined,
@@ -153,9 +143,9 @@ export async function updateProject(
   data: z.infer<typeof updateProjectSchema>,
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = updateProjectSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const project = await tx.project.update({
@@ -168,7 +158,7 @@ export async function updateProject(
         data: {
           organizationId: orgId,
           projectId: id,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'project.updated',
           description: `Updated project "${project.name}"`,
         },
@@ -185,8 +175,8 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('admin')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const project = await tx.project.findUnique({
@@ -199,7 +189,7 @@ export async function deleteProject(id: string): Promise<ActionResult> {
         data: {
           organizationId: orgId,
           projectId: id,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'project.deleted',
           description: `Deleted project "${project.name}"`,
         },
@@ -222,8 +212,8 @@ export async function updateDeliverableStatus(
   status: DeliverableStatus,
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.deliverableExecution.findUniqueOrThrow({
@@ -247,7 +237,7 @@ export async function updateDeliverableStatus(
           organizationId: orgId,
           projectId,
           deliverableExecutionId: id,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'deliverable.status_changed',
           description: `Changed deliverable status from "${fromStatus}" to "${status}"`,
           metadata: { from: fromStatus, to: status },
@@ -269,8 +259,8 @@ export async function updateDeliverableField(
   value: string | null,
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.deliverableExecution.findUniqueOrThrow({
@@ -298,7 +288,7 @@ export async function updateDeliverableField(
           organizationId: orgId,
           projectId,
           deliverableExecutionId: id,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'deliverable.updated',
           description: `Updated "${field}" on deliverable "${existing.name}"`,
           metadata: { field, value },

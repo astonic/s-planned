@@ -1,9 +1,8 @@
 'use server'
 
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth } from '@/lib/security'
 import type { EvidenceType } from '@prisma/client'
 
 type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
@@ -18,10 +17,9 @@ export async function addEvidenceLink(
     evidenceRequirementId?: string
   }
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   // Tenant ownership check
   const deliverable = await prisma.deliverableExecution.findFirst({
@@ -71,10 +69,9 @@ export async function addEvidenceFile(
     evidenceRequirementId?: string
   }
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const deliverable = await prisma.deliverableExecution.findFirst({
     where: { id: deliverableId, organizationId: orgId },
@@ -115,10 +112,9 @@ export async function addEvidenceFile(
 // ── Delete evidence ───────────────────────────────────────────────────────────
 
 export async function deleteEvidence(evidenceId: string): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const evidence = await prisma.evidence.findFirst({
     where: { id: evidenceId, organizationId: orgId },
@@ -158,10 +154,9 @@ export async function setEvidenceVerified(
   evidenceId: string,
   verified: boolean
 ): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('admin')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const evidence = await prisma.evidence.findFirst({
     where: { id: evidenceId, organizationId: orgId },
@@ -202,10 +197,9 @@ export async function toggleCriteriaCompletion(
   criteriaId: string,
   completed: boolean
 ): Promise<ActionResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) return { ok: false, error: 'Unauthorized' }
-  const orgId = session.currentOrganizationId
-  const actorName = session.user?.name ?? session.user?.email ?? 'Unknown'
+  const auth = await requireAuth('member')
+  const orgId = auth.orgId
+  const actorName = auth.userName
 
   const deliverable = await prisma.deliverableExecution.findFirst({
     where: { id: deliverableId, organizationId: orgId },

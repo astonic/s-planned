@@ -1,12 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth } from '@/lib/security'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,12 +13,6 @@ export type ActionResult<T = void> =
   | { ok: false; error: string }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function requireSession() {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) redirect('/login')
-  return session
-}
 
 async function auditLog(
   orgId: string,
@@ -49,9 +41,9 @@ export async function createTemplate(
   data: z.infer<typeof templateSchema>,
 ): Promise<ActionResult<{ id: string; name: string }>> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = templateSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const template = await withTenant(orgId, async (tx) => {
       return tx.template.create({
@@ -60,7 +52,7 @@ export async function createTemplate(
       })
     })
 
-    await auditLog(orgId, session.user.name, template.id, 'template.created', `Created template "${template.name}"`)
+    await auditLog(orgId, auth.userName, template.id, 'template.created', `Created template "${template.name}"`)
     revalidatePath('/templates')
     return { ok: true, data: template }
   } catch (e) {
@@ -73,9 +65,9 @@ export async function updateTemplate(
   data: z.infer<typeof templateSchema>,
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = templateSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const template = await withTenant(orgId, async (tx) => {
       return tx.template.update({
@@ -85,7 +77,7 @@ export async function updateTemplate(
       })
     })
 
-    await auditLog(orgId, session.user.name, id, 'template.updated', `Updated template "${template.name}"`)
+    await auditLog(orgId, auth.userName, id, 'template.updated', `Updated template "${template.name}"`)
     revalidatePath('/templates')
     revalidatePath(`/templates/${id}`)
     return { ok: true, data: undefined }
@@ -96,8 +88,8 @@ export async function updateTemplate(
 
 export async function deleteTemplate(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const template = await withTenant(orgId, async (tx) => {
       const t = await tx.template.findUnique({
@@ -109,7 +101,7 @@ export async function deleteTemplate(id: string): Promise<ActionResult> {
       return t
     })
 
-    await auditLog(orgId, session.user.name, null, 'template.deleted', `Deleted template "${template.name}"`)
+    await auditLog(orgId, auth.userName, null, 'template.deleted', `Deleted template "${template.name}"`)
     revalidatePath('/templates')
     return { ok: true, data: undefined }
   } catch (e) {
@@ -119,8 +111,8 @@ export async function deleteTemplate(id: string): Promise<ActionResult> {
 
 export async function cloneTemplate(id: string): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const src = await withTenant(orgId, async (tx) => {
       return tx.template.findUnique({
@@ -196,7 +188,7 @@ export async function cloneTemplate(id: string): Promise<ActionResult<{ id: stri
 
     await auditLog(
       orgId,
-      session.user.name,
+      auth.userName,
       clone.id,
       'template.cloned',
       `Cloned template "${src.name}" → "${clone.name}"`,
@@ -215,8 +207,8 @@ export async function addFocusArea(
   data: { code: string; name: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.template.findUniqueOrThrow({ where: { id: templateId, organizationId: orgId } })
@@ -236,8 +228,8 @@ export async function updateFocusArea(
   data: { code: string; name: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const fa = await withTenant(orgId, async (tx) => {
       return tx.focusArea.update({ where: { id }, data })
@@ -252,8 +244,8 @@ export async function updateFocusArea(
 
 export async function deleteFocusArea(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const fa = await withTenant(orgId, async (tx) => {
       return tx.focusArea.delete({ where: { id } })
@@ -273,8 +265,8 @@ export async function addSubSection(
   data: { code: string; name: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const fa = await tx.focusArea.findUniqueOrThrow({ where: { id: focusAreaId } })
@@ -294,8 +286,8 @@ export async function updateSubSection(
   data: { code: string; name: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.subSection.update({ where: { id }, data })
@@ -309,8 +301,8 @@ export async function updateSubSection(
 
 export async function deleteSubSection(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const ss = await tx.subSection.findUniqueOrThrow({
@@ -334,8 +326,8 @@ export async function addDeliverableTemplate(
   data: { code: string; name: string; description?: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.deliverableTemplate.create({ data: { subSectionId, ...data } })
@@ -358,8 +350,8 @@ export async function updateDeliverableTemplate(
   }>,
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.deliverableTemplate.update({ where: { id }, data })
@@ -373,8 +365,8 @@ export async function updateDeliverableTemplate(
 
 export async function deleteDeliverableTemplate(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.deliverableTemplate.delete({ where: { id } })
@@ -393,8 +385,8 @@ export async function addAcceptanceCriteria(
   data: { description: string; verificationMethod?: string },
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const ac = await withTenant(orgId, async (tx) => {
       return tx.acceptanceCriteria.create({
@@ -414,8 +406,8 @@ export async function updateAcceptanceCriteria(
   data: { description?: string; verificationMethod?: string },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.acceptanceCriteria.update({ where: { id }, data })
@@ -429,8 +421,8 @@ export async function updateAcceptanceCriteria(
 
 export async function deleteAcceptanceCriteria(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.acceptanceCriteria.delete({ where: { id } })
@@ -449,8 +441,8 @@ export async function addEvidenceRequirement(
   data: { name: string; type?: string; description?: string; required?: boolean },
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     const er = await withTenant(orgId, async (tx) => {
       return tx.evidenceRequirement.create({
@@ -470,8 +462,8 @@ export async function updateEvidenceRequirement(
   data: { name?: string; type?: string; description?: string; required?: boolean },
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.evidenceRequirement.update({ where: { id }, data })
@@ -485,8 +477,8 @@ export async function updateEvidenceRequirement(
 
 export async function deleteEvidenceRequirement(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       await tx.evidenceRequirement.delete({ where: { id } })

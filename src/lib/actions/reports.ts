@@ -1,10 +1,9 @@
 'use server'
 
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import type { ReportType } from '@prisma/client'
 import { buildAnalytics } from '@/app/api/analytics/route'
+import { requireAuth } from '@/lib/security'
 
 type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -20,18 +19,6 @@ interface CreateReportInput {
 
 interface UpdateSectionInput {
   comment: string
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function getOrgId(): Promise<string | null> {
-  const session = await getServerSession(authOptions)
-  return session?.currentOrganizationId ?? null
-}
-
-async function getActorName(): Promise<string> {
-  const session = await getServerSession(authOptions)
-  return session?.user?.name ?? 'Unknown'
 }
 
 // ── Build snapshot sections ───────────────────────────────────────────────────
@@ -162,13 +149,13 @@ async function buildSections(orgId: string, projectId: string, reportType: Repor
 // ── Server Actions ────────────────────────────────────────────────────────────
 
 export async function createReport(input: CreateReportInput): Promise<ActionResult<{ id: string }>> {
-  const orgId = await getOrgId()
-  if (!orgId) return { ok: false, error: 'Unauthorized' }
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const actorName = auth.userName
 
-  const actorName = await getActorName()
-
-  const project = await prisma.project.findUnique({ where: { id: input.projectId }, select: { organizationId: true } })
-  if (!project || project.organizationId !== orgId) return { ok: false, error: 'Project not found' }
+    const project = await prisma.project.findUnique({ where: { id: input.projectId }, select: { organizationId: true } })
+    if (!project || project.organizationId !== orgId) return { ok: false, error: 'Project not found' }
 
   const sections = await buildSections(orgId, input.projectId, input.reportType, input.periodStart, input.periodEnd)
 
@@ -203,14 +190,16 @@ export async function createReport(input: CreateReportInput): Promise<ActionResu
   })
 
   return { ok: true, data: { id: report.id } }
+  } catch (e) { return { ok: false, error: (e as Error).message } }
 }
 
 export async function updateSectionComment(
   sectionId: string,
   input: UpdateSectionInput
 ): Promise<ActionResult<void>> {
-  const orgId = await getOrgId()
-  if (!orgId) return { ok: false, error: 'Unauthorized' }
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
   const section = await prisma.reportSection.findUnique({
     where: { id: sectionId },
@@ -224,13 +213,14 @@ export async function updateSectionComment(
   })
 
   return { ok: true, data: undefined }
+  } catch (e) { return { ok: false, error: (e as Error).message } }
 }
 
 export async function publishReport(reportId: string): Promise<ActionResult<{ shareToken: string }>> {
-  const orgId = await getOrgId()
-  if (!orgId) return { ok: false, error: 'Unauthorized' }
-
-  const actorName = await getActorName()
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const actorName = auth.userName
 
   const report = await prisma.report.findUnique({
     where: { id: reportId },
@@ -256,11 +246,13 @@ export async function publishReport(reportId: string): Promise<ActionResult<{ sh
   })
 
   return { ok: true, data: { shareToken: updated.shareToken! } }
+  } catch (e) { return { ok: false, error: (e as Error).message } }
 }
 
 export async function unpublishReport(reportId: string): Promise<ActionResult<void>> {
-  const orgId = await getOrgId()
-  if (!orgId) return { ok: false, error: 'Unauthorized' }
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
   const report = await prisma.report.findUnique({
     where: { id: reportId },
@@ -274,11 +266,13 @@ export async function unpublishReport(reportId: string): Promise<ActionResult<vo
   })
 
   return { ok: true, data: undefined }
+  } catch (e) { return { ok: false, error: (e as Error).message } }
 }
 
 export async function deleteReport(reportId: string): Promise<ActionResult<void>> {
-  const orgId = await getOrgId()
-  if (!orgId) return { ok: false, error: 'Unauthorized' }
+  try {
+    const auth = await requireAuth('admin')
+    const orgId = auth.orgId
 
   const report = await prisma.report.findUnique({
     where: { id: reportId },
@@ -288,6 +282,7 @@ export async function deleteReport(reportId: string): Promise<ActionResult<void>
 
   await prisma.report.delete({ where: { id: reportId } })
   return { ok: true, data: undefined }
+  } catch (e) { return { ok: false, error: (e as Error).message } }
 }
 
 export async function logReportAccess(

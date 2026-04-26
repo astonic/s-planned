@@ -1,12 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth } from '@/lib/security'
 import type { RAIDType, RAIDSeverity, RAIDLikelihood, RAIDStatus } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -14,14 +12,6 @@ import type { RAIDType, RAIDSeverity, RAIDLikelihood, RAIDStatus } from '@prisma
 export type ActionResult<T = void> =
   | { ok: true; data: T }
   | { ok: false; error: string }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function requireSession() {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) redirect('/login')
-  return session
-}
 
 // ── Validation schemas ────────────────────────────────────────────────────────
 
@@ -60,9 +50,9 @@ export async function createRAIDItem(
   data: z.infer<typeof createRAIDItemSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = createRAIDItemSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const item = await withTenant(orgId, async (tx) => {
       // Verify project belongs to org
@@ -93,7 +83,7 @@ export async function createRAIDItem(
         data: {
           organizationId: orgId,
           projectId: parsed.projectId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'raid.created',
           description: `Created RAID item "${parsed.title}" (${parsed.type})`,
           metadata: { raidItemId: raidItem.id, type: parsed.type, severity: parsed.severity },
@@ -115,9 +105,9 @@ export async function updateRAIDItem(
   data: z.infer<typeof updateRAIDItemSchema>
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = updateRAIDItemSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.rAIDItem.findUnique({
@@ -147,7 +137,7 @@ export async function updateRAIDItem(
         data: {
           organizationId: orgId,
           projectId: existing.projectId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'raid.updated',
           description: `Updated RAID item "${existing.title}"`,
           metadata: { raidItemId: id, changes: parsed },
@@ -165,8 +155,8 @@ export async function updateRAIDItem(
 
 export async function deleteRAIDItem(id: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.rAIDItem.findUnique({
@@ -179,7 +169,7 @@ export async function deleteRAIDItem(id: string): Promise<ActionResult> {
         data: {
           organizationId: orgId,
           projectId: existing.projectId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'raid.deleted',
           description: `Deleted RAID item "${existing.title}"`,
           metadata: { raidItemId: id },
@@ -204,8 +194,8 @@ export async function linkRAIDToDeliverable(
   deliverableExecutionId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       // Verify the RAID item belongs to this org
@@ -231,7 +221,7 @@ export async function linkRAIDToDeliverable(
           organizationId: orgId,
           projectId: raidItem.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'raid.linked',
           description: `Linked RAID item "${raidItem.title}" to deliverable`,
           metadata: { raidItemId, deliverableExecutionId },
@@ -250,8 +240,8 @@ export async function unlinkRAIDFromDeliverable(
   deliverableExecutionId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const raidItem = await tx.rAIDItem.findUnique({
@@ -274,7 +264,7 @@ export async function unlinkRAIDFromDeliverable(
           organizationId: orgId,
           projectId: raidItem.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'raid.unlinked',
           description: `Unlinked RAID item "${raidItem.title}" from deliverable`,
           metadata: { raidItemId, deliverableExecutionId },

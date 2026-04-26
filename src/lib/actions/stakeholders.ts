@@ -1,26 +1,16 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { getServerSession } from 'next-auth'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
+import { requireAuth } from '@/lib/security'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
   | { ok: false; error: string }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function requireSession() {
-  const session = await getServerSession(authOptions)
-  if (!session?.currentOrganizationId) redirect('/login')
-  return session
-}
 
 // ── Validation schemas ────────────────────────────────────────────────────────
 
@@ -60,9 +50,9 @@ export async function createPerson(
   data: z.infer<typeof createPersonSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = createPersonSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const person = await withTenant(orgId, async (tx) => {
       const created = await tx.person.create({
@@ -81,7 +71,7 @@ export async function createPerson(
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.person.created',
           description: `Created person "${created.name}"`,
           metadata: { personId: created.id, type: created.type, role: created.role },
@@ -103,9 +93,9 @@ export async function updatePerson(
   data: z.infer<typeof updatePersonSchema>
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = updatePersonSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.person.findUnique({
@@ -130,7 +120,7 @@ export async function updatePerson(
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.person.updated',
           description: `Updated person "${existing.name}"`,
           metadata: { personId, changes: parsed },
@@ -147,8 +137,8 @@ export async function updatePerson(
 
 export async function deletePerson(personId: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.person.findUnique({
@@ -160,7 +150,7 @@ export async function deletePerson(personId: string): Promise<ActionResult> {
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.person.deleted',
           description: `Deleted person "${existing.name}"`,
           metadata: { personId },
@@ -183,9 +173,9 @@ export async function createVendor(
   data: z.infer<typeof createVendorSchema>
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = createVendorSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     const vendor = await withTenant(orgId, async (tx) => {
       const created = await tx.vendor.create({
@@ -206,7 +196,7 @@ export async function createVendor(
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.vendor.created',
           description: `Created vendor "${created.name}"`,
           metadata: { vendorId: created.id, type: created.type },
@@ -228,9 +218,9 @@ export async function updateVendor(
   data: z.infer<typeof updateVendorSchema>
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
+    const auth = await requireAuth('member')
     const parsed = updateVendorSchema.parse(data)
-    const orgId = session.currentOrganizationId
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.vendor.findUnique({
@@ -257,7 +247,7 @@ export async function updateVendor(
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.vendor.updated',
           description: `Updated vendor "${existing.name}"`,
           metadata: { vendorId, changes: parsed },
@@ -274,8 +264,8 @@ export async function updateVendor(
 
 export async function deleteVendor(vendorId: string): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.vendor.findUnique({
@@ -287,7 +277,7 @@ export async function deleteVendor(vendorId: string): Promise<ActionResult> {
       await tx.auditEvent.create({
         data: {
           organizationId: orgId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.vendor.deleted',
           description: `Deleted vendor "${existing.name}"`,
           metadata: { vendorId },
@@ -311,8 +301,8 @@ export async function linkPersonToDeliverable(
   personId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const [deliverable, person] = await Promise.all([
@@ -349,7 +339,7 @@ export async function linkPersonToDeliverable(
           organizationId: orgId,
           projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.person.linked',
           description: `Linked person "${person.name}" to deliverable "${deliverable.name}"`,
           metadata: { personId, deliverableExecutionId },
@@ -369,8 +359,8 @@ export async function unlinkPersonFromDeliverable(
   personId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const [deliverable, person] = await Promise.all([
@@ -405,7 +395,7 @@ export async function unlinkPersonFromDeliverable(
           organizationId: orgId,
           projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.person.unlinked',
           description: `Unlinked person "${person.name}" from deliverable "${deliverable.name}"`,
           metadata: { personId, deliverableExecutionId },
@@ -425,8 +415,8 @@ export async function setDeliverableOwner(
   personId: string | null
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const existing = await tx.deliverableExecution.findUnique({
@@ -466,7 +456,7 @@ export async function setDeliverableOwner(
           organizationId: orgId,
           projectId: existing.subSectionExecution.focusAreaExecution.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.owner.changed',
           description: personId
             ? `Set owner of deliverable "${existing.name}" to "${newOwnerName}"`
@@ -491,8 +481,8 @@ export async function linkVendorToDeliverable(
   vendorId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const [deliverable, vendor] = await Promise.all([
@@ -529,7 +519,7 @@ export async function linkVendorToDeliverable(
           organizationId: orgId,
           projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.vendor.linked',
           description: `Linked vendor "${vendor.name}" to deliverable "${deliverable.name}"`,
           metadata: { vendorId, deliverableExecutionId },
@@ -549,8 +539,8 @@ export async function unlinkVendorFromDeliverable(
   vendorId: string
 ): Promise<ActionResult> {
   try {
-    const session = await requireSession()
-    const orgId = session.currentOrganizationId
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
       const [deliverable, vendor] = await Promise.all([
@@ -585,7 +575,7 @@ export async function unlinkVendorFromDeliverable(
           organizationId: orgId,
           projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
           deliverableExecutionId,
-          actorName: session.user.name,
+          actorName: auth.userName,
           eventType: 'stakeholder.vendor.unlinked',
           description: `Unlinked vendor "${vendor.name}" from deliverable "${deliverable.name}"`,
           metadata: { vendorId, deliverableExecutionId },
