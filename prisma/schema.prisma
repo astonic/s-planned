@@ -342,6 +342,10 @@ model DeliverableExecution {
   subSectionExecution SubSectionExecution  @relation(fields: [subSectionExecutionId], references: [id], onDelete: Cascade)
   auditEvents         AuditEvent[]
   raidLinks           RAIDItemDeliverable[]
+  peopleLinks         DeliverableExecutionPerson[]
+  vendorLinks         DeliverableExecutionVendor[]
+  owner               Person?              @relation("DeliverableOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerId             String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -416,4 +420,88 @@ model RAIDItemDeliverable {
 
   @@id([raidItemId, deliverableExecutionId])
   @@map("raid_item_deliverables")
+}
+
+// ── Phase 5: Stakeholders & Team ──────────────────────────────────────────────
+
+enum PersonType {
+  internal
+  contractor
+  consultant
+}
+
+enum PersonRole {
+  owner
+  team
+  end_user
+}
+
+model Person {
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String
+  type           PersonType @default(internal)
+  company        String?
+  role           PersonRole @default(team)
+  email          String?
+  phone          String?
+  notes          String?    @db.Text
+
+  deliverableLinks DeliverableExecutionPerson[]
+  ownedDeliverables DeliverableExecution[]      @relation("DeliverableOwner")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("people")
+}
+
+enum VendorType {
+  supplier
+  service_provider
+}
+
+model Vendor {
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String
+  type           VendorType @default(supplier)
+  contactName    String?
+  contactRole    String?
+  email          String?
+  phone          String?
+  address        String?
+  website        String?
+  notes          String?    @db.Text
+
+  deliverableLinks DeliverableExecutionVendor[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("vendors")
+}
+
+model DeliverableExecutionPerson {
+  deliverableExecutionId String
+  personId               String
+
+  deliverableExecution   DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+  person                 Person               @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@id([deliverableExecutionId, personId])
+  @@map("deliverable_execution_people")
+}
+
+model DeliverableExecutionVendor {
+  deliverableExecutionId String
+  vendorId               String
+
+  deliverableExecution   DeliverableExecution @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
+  vendor                 Vendor               @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@id([deliverableExecutionId, vendorId])
+  @@map("deliverable_execution_vendors")
 }

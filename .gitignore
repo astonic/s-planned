@@ -45,3 +45,4 @@ logs/
 
 # OS
 Thumbs.db
+.claude/worktrees/

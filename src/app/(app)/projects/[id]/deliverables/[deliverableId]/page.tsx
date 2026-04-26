@@ -29,6 +29,9 @@ export default async function DeliverableDetailPage({ params }: Props) {
           },
         },
       },
+      owner: true,
+      peopleLinks: { include: { person: true } },
+      vendorLinks: { include: { vendor: true } },
     },
   })
 
@@ -39,7 +42,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
   // Tenant check
   if (project.organizationId !== orgId) notFound()
 
-  const [linkedRAID, projectRAID] = await Promise.all([
+  const [linkedRAID, projectRAID, orgPeople, orgVendors] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
       where: { deliverableExecutionId: params.deliverableId },
       include: {
@@ -51,6 +54,14 @@ export default async function DeliverableDetailPage({ params }: Props) {
     prisma.rAIDItem.findMany({
       where: { projectId: project.id },
       select: { id: true, type: true, title: true, severity: true, status: true },
+    }),
+    prisma.person.findMany({
+      where: { organizationId: orgId },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.vendor.findMany({
+      where: { organizationId: orgId },
+      orderBy: { name: 'asc' },
     }),
   ])
 
@@ -71,6 +82,8 @@ export default async function DeliverableDetailPage({ params }: Props) {
           projectId={project.id}
           linkedRAID={linkedRAID}
           projectRAID={projectRAID}
+          orgPeople={orgPeople}
+          orgVendors={orgVendors}
         />
       </div>
     </>
