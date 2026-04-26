@@ -281,6 +281,7 @@ model Project {
   auditEvents         AuditEvent[]
   raidItems           RAIDItem[]
   decisions           Decision[]
+  reports             Report[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -611,4 +612,74 @@ model Decision {
   @@index([organizationId])
   @@index([projectId])
   @@map("decisions")
+}
+
+// ── Phase 9: Reports & Sharing ────────────────────────────────────────────────
+
+enum ReportType {
+  detailed_activities
+  executive_summary
+}
+
+enum ReportStatus {
+  draft
+  published
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  organizationId String
+  projectId      String
+  title          String
+  reportType     ReportType
+  status         ReportStatus @default(draft)
+  shareToken     String?      @unique @default(uuid())
+  createdBy      String
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  publishedAt    DateTime?
+
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections       ReportSection[]
+  accessLog      ReportAccess[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([shareToken])
+  @@map("reports")
+}
+
+model ReportSection {
+  id        String @id @default(uuid())
+  reportId  String
+  type      String
+  title     String
+  content   Json
+  comment   String? @db.Text
+  sortOrder Int     @default(0)
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reportId])
+  @@map("report_sections")
+}
+
+model ReportAccess {
+  id         String   @id @default(uuid())
+  reportId   String
+  accessedAt DateTime @default(now())
+  accessedBy String?
+  ipAddress  String?
+  userAgent  String?
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@map("report_access")
 }
