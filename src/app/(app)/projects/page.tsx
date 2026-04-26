@@ -1,11 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { ProjectCard } from './_components/ProjectCard'
-import { NewProjectButton } from './_components/NewProjectButton'
+import { ProjectsView } from './_components/ProjectsView'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import type { ProjectCardData } from './_components/ProjectCard'
 
@@ -65,32 +63,10 @@ export default async function ProjectsPage({
 
   return (
     <>
-      <PageHeader title="Projects" actions={<NewProjectButton />} />
-      <div style={{ padding: '24px' }}>
-        {projects.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-            <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, color: '#111' }}>No projects yet</p>
-            <p style={{ fontSize: 14, color: '#616161', marginBottom: 24 }}>
-              Create your first project to start tracking operational readiness.
-            </p>
-            <Link href="/projects/new" style={{
-              display: 'inline-block', padding: '8px 20px', borderRadius: 6,
-              backgroundColor: '#1474CB', color: '#fff', fontWeight: 600,
-              fontSize: 14, textDecoration: 'none',
-            }}>
-              Create your first project
-            </Link>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 16 }}>
-              {projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
-            </div>
-            <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} />
-          </>
-        )}
+      <PageHeader title="Projects" />
+      <div style={{ padding: 'var(--sp-space-6)' }}>
+        <ProjectsView projects={projects} />
+        {total > PAGE_SIZE && <PaginationBar page={page} pageSize={PAGE_SIZE} total={total} />}
       </div>
     </>
   )

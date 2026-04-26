@@ -22,6 +22,7 @@ import {
   Spinner,
   Divider,
 } from '@fluentui/react-components'
+import { DeleteRegular, CheckmarkCircleRegular, DismissCircleRegular } from '@fluentui/react-icons'
 import {
   addEvidenceLink,
   addEvidenceFile,
@@ -193,18 +194,30 @@ function EvidenceRow({ item, onDelete, onVerify }: {
         <Badge appearance="filled" color="success" size="small">Verified</Badge>
       )}
       {!item.verified && (
-        <Button size="small" appearance="subtle" onClick={() => onVerify(item.id, true)}>
-          Verify
-        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<CheckmarkCircleRegular />}
+          onClick={() => onVerify(item.id, true)}
+          aria-label="Verify evidence"
+        />
       )}
       {item.verified && (
-        <Button size="small" appearance="subtle" onClick={() => onVerify(item.id, false)}>
-          Unverify
-        </Button>
+        <Button
+          size="small"
+          appearance="subtle"
+          icon={<DismissCircleRegular />}
+          onClick={() => onVerify(item.id, false)}
+          aria-label="Unverify evidence"
+        />
       )}
-      <Button size="small" appearance="subtle" onClick={() => onDelete(item.id)}>
-        Remove
-      </Button>
+      <Button
+        size="small"
+        appearance="subtle"
+        icon={<DeleteRegular />}
+        onClick={() => onDelete(item.id)}
+        aria-label="Remove evidence"
+      />
     </div>
   )
 }

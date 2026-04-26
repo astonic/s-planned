@@ -4,12 +4,11 @@ import { useState, useTransition } from 'react'
 import {
   makeStyles,
   tokens,
-  TabList,
-  Tab,
   Select,
   Text,
   Spinner,
 } from '@fluentui/react-components'
+import { SpTabBar } from '@/components/ui/SpTabBar'
 import type { ReadinessTabProps } from './ReadinessTab'
 import { ReadinessTab } from './ReadinessTab'
 import type { DeliverablesTabProps } from './DeliverablesTab'
@@ -40,15 +39,6 @@ export interface AnalyticsTabsProps {
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column' },
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    backgroundColor: tokens.colorNeutralBackground1,
-    paddingLeft: tokens.spacingHorizontalXXL,
-    paddingRight: tokens.spacingHorizontalXXL,
-  },
   content: {
     padding: `${tokens.spacingVerticalXL} ${tokens.spacingHorizontalXXL}`,
   },
@@ -76,34 +66,41 @@ export function AnalyticsTabs({ projects, initialProjectId, initialData }: Analy
     })
   }
 
+  const tabs = [
+    { value: 'readiness' as const, label: 'Readiness' },
+    { value: 'deliverables' as const, label: 'Deliverables' },
+    { value: 'raid' as const, label: 'RAID' },
+    { value: 'team' as const, label: 'Team' },
+  ]
+
+  const projectSelector = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+      {loading && <Spinner size="tiny" />}
+      {projects.length === 0 ? (
+        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>No projects</Text>
+      ) : (
+        <Select
+          size="small"
+          value={projectId}
+          onChange={(_, d) => handleProjectChange(d.value)}
+        >
+          <option value="all">All Projects</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </Select>
+      )}
+    </div>
+  )
+
   return (
     <div className={styles.root}>
-      <div className={styles.toolbar}>
-        <TabList selectedValue={tab} onTabSelect={(_, d) => setTab(d.value as TabKey)}>
-          <Tab value="readiness">Readiness</Tab>
-          <Tab value="deliverables">Deliverables</Tab>
-          <Tab value="raid">RAID</Tab>
-          <Tab value="team">Team</Tab>
-        </TabList>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM, paddingTop: '8px', paddingBottom: '8px' }}>
-          {loading && <Spinner size="tiny" />}
-          {projects.length === 0 ? (
-            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>No projects</Text>
-          ) : (
-            <Select
-              size="small"
-              value={projectId}
-              onChange={(_, d) => handleProjectChange(d.value)}
-            >
-              <option value="all">All Projects</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </Select>
-          )}
-        </div>
-      </div>
+      <SpTabBar
+        tabs={tabs}
+        selectedValue={tab}
+        onTabSelect={(_, d) => setTab(d.value as TabKey)}
+        right={projectSelector}
+      />
 
       <div className={styles.content}>
         {tab === 'readiness' && <ReadinessTab {...data.readiness} />}

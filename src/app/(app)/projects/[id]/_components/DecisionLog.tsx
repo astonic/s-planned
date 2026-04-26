@@ -19,10 +19,20 @@ import {
   Textarea,
   Select,
   Spinner,
-  Divider,
+  DataGrid,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridBody,
+  DataGridRow,
+  DataGridCell,
+  createTableColumn,
+  type TableColumnDefinition,
 } from '@fluentui/react-components'
 import type { DecisionStatus } from '@prisma/client'
 import { createDecision, updateDecision, deleteDecision } from '@/lib/actions/notes-decisions'
+import { EditRegular, DeleteRegular, AddRegular } from '@fluentui/react-icons'
+import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
+import { SpSectionCard } from '@/components/ui/SpSectionCard'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,41 +56,9 @@ export interface DecisionLogProps {
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  table: { width: '100%', borderCollapse: 'collapse' as const },
-  th: {
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    textAlign: 'left' as const,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    fontSize: tokens.fontSizeBase200,
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground3,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.04em',
-    whiteSpace: 'nowrap' as const,
-  },
-  td: {
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalM}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    verticalAlign: 'top' as const,
-    fontSize: tokens.fontSizeBase300,
-  },
-  tdActions: {
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    verticalAlign: 'middle' as const,
-    whiteSpace: 'nowrap' as const,
-  },
   description: { fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground1 },
   meta: { fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3, marginTop: '2px' },
-  empty: { color: tokens.colorNeutralForeground3, fontStyle: 'italic', padding: tokens.spacingVerticalL, textAlign: 'center' as const },
-  card: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden',
-  },
+  toolbarWrapper: { padding: `0 ${tokens.spacingHorizontalL}` },
 })
 
 const STATUS_COLORS: Record<DecisionStatus, 'warning' | 'success' | 'danger' | 'informative'> = {
@@ -160,9 +138,9 @@ function DecisionDialog({
     <Dialog open={open} onOpenChange={(_, d) => { setOpen(d.open); if (!d.open) reset() }}>
       <DialogTrigger disableButtonEnhancement>
         {editing ? (
-          <Button size="small" appearance="subtle">Edit</Button>
+          <Button size="small" appearance="subtle" icon={<EditRegular />} aria-label="Edit decision" />
         ) : (
-          <Button appearance="primary" size="small">+ Log Decision</Button>
+          <Button appearance="primary" size="small" icon={<AddRegular />}>Log Decision</Button>
         )}
       </DialogTrigger>
       <DialogSurface>
@@ -237,7 +215,7 @@ function DeleteDecisionDialog({ decisionId, onDeleted }: { decisionId: string; o
   return (
     <Dialog open={open} onOpenChange={(_, d) => setOpen(d.open)}>
       <DialogTrigger disableButtonEnhancement>
-        <Button size="small" appearance="subtle">Delete</Button>
+        <Button size="small" appearance="subtle" icon={<DeleteRegular />} aria-label="Delete decision" />
       </DialogTrigger>
       <DialogSurface>
         <DialogBody>
@@ -262,6 +240,68 @@ function DeleteDecisionDialog({ decisionId, onDeleted }: { decisionId: string; o
 export function DecisionLog({ projectId, initialDecisions }: DecisionLogProps) {
   const styles = useStyles()
   const [decisions, setDecisions] = useState<DecisionItem[]>(initialDecisions)
+  const [search, setSearch] = useState('')
+
+  const columns: TableColumnDefinition<DecisionItem>[] = [
+    createTableColumn({
+      columnId: 'description',
+      compare: (a, b) => a.description.localeCompare(b.description),
+      renderHeaderCell: () => 'Decision',
+      renderCell: (d) => (
+        <div>
+          <Text className={styles.description} block>{d.description}</Text>
+          {d.impact && <Text className={styles.meta} block>Impact: {d.impact}</Text>}
+          {d.comments && <Text className={styles.meta} block>{d.comments}</Text>}
+        </div>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'status',
+      compare: (a, b) => a.status.localeCompare(b.status),
+      renderHeaderCell: () => 'Status',
+      renderCell: (d) => (
+        <Badge appearance="tint" color={STATUS_COLORS[d.status]} size="small">
+          {STATUS_LABELS[d.status]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'loggedDate',
+      compare: (a, b) => new Date(a.loggedDate).getTime() - new Date(b.loggedDate).getTime(),
+      renderHeaderCell: () => 'Date',
+      renderCell: (d) => (
+        <Text size={200}>
+          {new Date(d.loggedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </Text>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'loggedBy',
+      compare: (a, b) => a.loggedBy.localeCompare(b.loggedBy),
+      renderHeaderCell: () => 'Logged By',
+      renderCell: (d) => <Text size={200}>{d.loggedBy}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'actions',
+      compare: () => 0,
+      renderHeaderCell: () => '',
+      renderCell: (d) => (
+        <div style={{ display: 'flex', gap: tokens.spacingHorizontalXS }}>
+          <DecisionDialog projectId={projectId} editing={d} onDone={handleUpdated} />
+          <DeleteDecisionDialog decisionId={d.id} onDeleted={() => handleDeleted(d.id)} />
+        </div>
+      ),
+    }),
+  ]
+
+  const filtered = decisions.filter((d) => {
+    const q = search.trim().toLowerCase()
+    if (!q) return true
+    return [d.description, d.impact ?? '', d.comments ?? '', d.loggedBy, d.status]
+      .join(' ')
+      .toLowerCase()
+      .includes(q)
+  })
 
   function handleCreated(decision: DecisionItem) {
     setDecisions((prev) => [decision, ...prev])
@@ -277,65 +317,34 @@ export function DecisionLog({ projectId, initialDecisions }: DecisionLogProps) {
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        <div>
-          <Text size={400} weight="semibold" block>Decision Log</Text>
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-            {decisions.length} decision{decisions.length !== 1 ? 's' : ''} logged
-          </Text>
+      <SpSectionCard
+        title="Decision Log"
+        count={filtered.length}
+        countLabel="decision"
+        actions={<DecisionDialog projectId={projectId} onDone={handleCreated} />}
+        isEmpty={decisions.length === 0}
+        emptyMessage="No decisions logged yet."
+      >
+        <div className={styles.toolbarWrapper}>
+          <SpGridToolbar search={search} onSearch={setSearch} searchPlaceholder="Search decisions..." />
         </div>
-        <DecisionDialog projectId={projectId} onDone={handleCreated} />
-      </div>
-
-      <Divider />
-
-      {decisions.length === 0 ? (
-        <div className={styles.card}>
-          <Text className={styles.empty}>No decisions logged yet.</Text>
-        </div>
-      ) : (
-        <div className={styles.card}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Decision</th>
-                <th className={styles.th}>Status</th>
-                <th className={styles.th}>Date</th>
-                <th className={styles.th}>Logged By</th>
-                <th className={styles.th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {decisions.map((d) => (
-                <tr key={d.id}>
-                  <td className={styles.td}>
-                    <Text className={styles.description}>{d.description}</Text>
-                    {d.impact && <Text className={styles.meta}>Impact: {d.impact}</Text>}
-                    {d.comments && <Text className={styles.meta}>{d.comments}</Text>}
-                  </td>
-                  <td className={styles.td}>
-                    <Badge appearance="tint" color={STATUS_COLORS[d.status]} size="small">
-                      {STATUS_LABELS[d.status]}
-                    </Badge>
-                  </td>
-                  <td className={styles.td}>
-                    <Text size={200}>
-                      {new Date(d.loggedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </Text>
-                  </td>
-                  <td className={styles.td}>
-                    <Text size={200}>{d.loggedBy}</Text>
-                  </td>
-                  <td className={styles.tdActions}>
-                    <DecisionDialog projectId={projectId} editing={d} onDone={handleUpdated} />
-                    <DeleteDecisionDialog decisionId={d.id} onDeleted={() => handleDeleted(d.id)} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        <DataGrid items={filtered} columns={columns} sortable getRowId={(d) => d.id}>
+          <DataGridHeader>
+            <DataGridRow>
+              {({ renderHeaderCell }) => (
+                <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+              )}
+            </DataGridRow>
+          </DataGridHeader>
+          <DataGridBody<DecisionItem>>
+            {({ item, rowId }) => (
+              <DataGridRow key={rowId}>
+                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+              </DataGridRow>
+              )}
+            </DataGridBody>
+          </DataGrid>
+      </SpSectionCard>
     </div>
   )
 }

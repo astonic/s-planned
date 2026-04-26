@@ -16,82 +16,139 @@ import {
 } from '@fluentui/react-icons'
 import { useSidebar } from './SidebarContext'
 import { OrganizationSwitcher } from './OrganizationSwitcher'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 const useStyles = makeStyles({
   sidebar: {
-    display: 'flex',
+    display: 'none',
     flexDirection: 'column',
-    height: '100%',
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
-    transition: 'width 200ms ease',
+    minHeight: '100dvh',
+    backgroundColor: '#0F1E3D',
+    borderRight: '0.5px solid rgba(59,130,246,0.18)',
+    boxShadow: 'var(--sp-shadow-2)',
+    transition: 'width var(--sp-dur-slow) var(--sp-ease)',
     overflowX: 'hidden',
+    '@media (min-width: 640px)': {
+      display: 'flex',
+    },
   },
-  expanded: { width: '240px' },
-  collapsed: { width: '48px' },
+  expanded: {
+    width: '56px',
+    '@media (min-width: 1024px)': {
+      width: '220px',
+    },
+  },
+  collapsed: { width: '56px' },
   logo: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalM}`,
-    minHeight: '56px',
+    padding: '12px 14px',
+    minHeight: '64px',
+    justifyContent: 'center',
+    '@media (min-width: 1024px)': {
+      justifyContent: 'flex-start',
+    },
   },
   logoText: {
-    color: tokens.colorBrandForeground1,
-    fontWeight: tokens.fontWeightSemibold,
+    color: '#F0F4FF',
+    fontWeight: 800,
     fontSize: tokens.fontSizeBase400,
+    letterSpacing: '-0.5px',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
+    display: 'none',
+    '@media (min-width: 1024px)': {
+      display: 'inline',
+    },
   },
   nav: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
-    padding: `0 ${tokens.spacingHorizontalXS}`,
+    gap: tokens.spacingVerticalXS,
+    padding: '0 8px',
     overflowY: 'auto',
   },
   navItem: {
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
-    borderRadius: tokens.borderRadiusMedium,
+    justifyContent: 'center',
+    gap: '10px',
+    minHeight: '44px',
+    padding: '9px 12px',
+    borderRadius: 'var(--sp-radius-md)',
     textDecoration: 'none',
-    color: tokens.colorNeutralForeground2,
+    color: '#8E9BAF',
+    fontWeight: 700,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     ':hover': {
-      backgroundColor: tokens.colorNeutralBackground1Hover,
-      color: tokens.colorNeutralForeground1,
+      backgroundColor: 'rgba(239,245,253,0.10)',
+      color: '#CCDFF8',
+      transform: 'translateY(-1px)',
+    },
+    '@media (min-width: 1024px)': {
+      justifyContent: 'flex-start',
+      padding: '9px 14px',
     },
   },
   navItemActive: {
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground1,
+    background: 'linear-gradient(135deg, rgba(239,245,253,0.16), rgba(239,245,253,0.08))',
+    color: '#FFFFFF',
+    boxShadow: 'var(--sp-shadow-1)',
     ':hover': {
-      backgroundColor: tokens.colorBrandBackground2Hover,
+      background: 'linear-gradient(135deg, rgba(239,245,253,0.20), rgba(239,245,253,0.10))',
+    },
+    '::before': {
+      content: '""',
+      width: '8px',
+      height: '8px',
+      borderRadius: 'var(--sp-radius-pill)',
+      background: 'var(--sp-grad-primary)',
+      boxShadow: 'var(--sp-glow-blue)',
+      position: 'absolute',
+      left: '6px',
+      '@media (min-width: 1024px)': {
+        position: 'static',
+      },
     },
   },
-  navLabel: { overflow: 'hidden', textOverflow: 'ellipsis' },
+  navLabel: {
+    display: 'none',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    '@media (min-width: 1024px)': {
+      display: 'inline',
+    },
+  },
   divider: {
-    height: '1px',
-    backgroundColor: tokens.colorNeutralStroke1,
+    height: '0.5px',
+    backgroundColor: 'rgba(214,220,232,0.22)',
     margin: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalS}`,
   },
   footer: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalS,
+    justifyContent: 'center',
     padding: tokens.spacingHorizontalM,
-    borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderTop: '0.5px solid rgba(214,220,232,0.18)',
     overflow: 'hidden',
     minHeight: '64px',
+    '@media (min-width: 1024px)': {
+      justifyContent: 'flex-start',
+    },
   },
   footerText: {
+    display: 'none',
     flex: 1,
     overflow: 'hidden',
     minWidth: 0,
+    '@media (min-width: 1024px)': {
+      display: 'block',
+    },
   },
   userName: {
     display: 'block',
@@ -110,12 +167,31 @@ const useStyles = makeStyles({
     bottom: '80px',
     right: '-12px',
     zIndex: 10,
-    borderRadius: '50%',
+    borderRadius: 'var(--sp-radius-pill)',
     minWidth: '24px',
     height: '24px',
     padding: '0',
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    backgroundColor: tokens.colorNeutralBackground1,
+    border: '1.5px solid var(--sp-blue-100)',
+    backgroundColor: '#FFFFFF',
+    boxShadow: 'var(--sp-shadow-2)',
+    display: 'none',
+    '@media (min-width: 1024px)': {
+      display: 'inline-flex',
+    },
+  },
+  logoMark: {
+    width: '32px',
+    height: '32px',
+    borderRadius: 'var(--sp-radius-md)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--sp-grad-primary)',
+    color: '#FFFFFF',
+    fontSize: '18px',
+    fontWeight: 800,
+    boxShadow: '0 8px 24px rgba(23,87,194,0.18), 0 4px 8px rgba(23,87,194,0.10)',
+    flexShrink: 0,
   },
 })
 
@@ -141,6 +217,7 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
   const pathname = usePathname()
   const { state, toggle } = useSidebar()
   const isCollapsed = state === 'collapsed'
+  const showExpandedLabels = !isCollapsed
 
   return (
     <div
@@ -148,8 +225,8 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
       style={{ position: 'relative' }}
     >
       <div className={styles.logo}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: '#1474CB', flexShrink: 0 }}>S</span>
-        {!isCollapsed && <span className={styles.logoText}>S-Planned</span>}
+        <span className={styles.logoMark}>S</span>
+        {showExpandedLabels && <span className={styles.logoText}>S-planned</span>}
       </div>
 
       <nav className={styles.nav}>
@@ -162,7 +239,7 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
               <Icon style={{ flexShrink: 0, fontSize: 20 }} />
-              {!isCollapsed && <Text size={200} className={styles.navLabel}>{label}</Text>}
+              {showExpandedLabels && <Text size={200} className={styles.navLabel}>{label}</Text>}
             </Link>
           )
           return isCollapsed ? (
@@ -182,7 +259,7 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
               className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
             >
               <SettingsRegular style={{ flexShrink: 0, fontSize: 20 }} />
-              {!isCollapsed && <Text size={200} className={styles.navLabel}>Settings</Text>}
+              {showExpandedLabels && <Text size={200} className={styles.navLabel}>Settings</Text>}
             </Link>
           )
           return isCollapsed ? (
@@ -191,6 +268,10 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
             </Tooltip>
           ) : item
         })()}
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: tokens.spacingVerticalXS }}>
+          <ThemeToggle />
+        </div>
       </nav>
 
       <Button
@@ -209,7 +290,7 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
           size={32}
           style={{ flexShrink: 0 }}
         />
-        {!isCollapsed && (
+        {showExpandedLabels && (
           <div className={styles.footerText}>
             <Text size={200} weight="semibold" className={styles.userName}>{userName}</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS, marginTop: '4px' }}>

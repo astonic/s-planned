@@ -4,10 +4,13 @@ import { useState, useTransition } from 'react'
 import {
   makeStyles, tokens, Text, Button, Dialog, DialogTrigger, DialogSurface,
   DialogTitle, DialogBody, DialogContent, DialogActions, Spinner,
-  Table, TableHeader, TableRow, TableHeaderCell, TableBody, TableCell, Badge,
+  DataGrid, DataGridHeader, DataGridRow, DataGridHeaderCell, DataGridBody,
+  DataGridCell, createTableColumn, type TableColumnDefinition, Badge,
 } from '@fluentui/react-components'
 import { DeleteRegular } from '@fluentui/react-icons'
 import { revokeInvite } from '@/lib/actions/invites'
+import { SpSectionCard } from '@/components/ui/SpSectionCard'
+import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
 
 const ROLE_COLORS: Record<string, 'warning' | 'success' | 'informative' | 'important'> = {
   admin: 'warning', member: 'success', viewer: 'informative',
@@ -15,21 +18,7 @@ const ROLE_COLORS: Record<string, 'warning' | 'success' | 'informative' | 'impor
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  section: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-  },
-  empty: {
-    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalL}`,
-    textAlign: 'center' as const,
-    color: tokens.colorNeutralForeground3,
-  },
+  toolbarWrapper: { padding: `0 ${tokens.spacingHorizontalL}` },
 })
 
 export interface PendingInvite {
@@ -49,7 +38,73 @@ export function PendingInvitesTable({ invites: initial, onInviteRevoked }: Props
   const styles = useStyles()
   const [invites, setInvites] = useState<PendingInvite[]>(initial)
   const [revoking, setRevoking] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [, startTransition] = useTransition()
+
+  const columns: TableColumnDefinition<PendingInvite>[] = [
+    createTableColumn({
+      columnId: 'email',
+      compare: (a, b) => a.email.localeCompare(b.email),
+      renderHeaderCell: () => 'Email',
+      renderCell: (inv) => <Text size={200}>{inv.email}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'role',
+      compare: (a, b) => a.role.localeCompare(b.role),
+      renderHeaderCell: () => 'Role',
+      renderCell: (inv) => <Badge appearance="tint" color={ROLE_COLORS[inv.role] ?? 'informative'}>{inv.role}</Badge>,
+    }),
+    createTableColumn({
+      columnId: 'sentAt',
+      compare: (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+      renderHeaderCell: () => 'Sent',
+      renderCell: (inv) => <Text size={200}>{new Date(inv.sentAt).toLocaleDateString('en-GB', { month: 'short', day: '2-digit' })}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'expiresAt',
+      compare: (a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime(),
+      renderHeaderCell: () => 'Expires',
+      renderCell: (inv) => <Text size={200}>{new Date(inv.expiresAt).toLocaleDateString('en-GB', { month: 'short', day: '2-digit' })}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'actions',
+      compare: () => 0,
+      renderHeaderCell: () => '',
+      renderCell: (inv) => (
+        <Dialog>
+          <DialogTrigger disableButtonEnhancement>
+            <Button
+              icon={<DeleteRegular />}
+              size="small"
+              appearance="subtle"
+              disabled={revoking === inv.id}
+            />
+          </DialogTrigger>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>Revoke Invite</DialogTitle>
+              <DialogContent>
+                <Text>Revoke the invite to <strong>{inv.email}</strong>? They will not be able to accept it.</Text>
+              </DialogContent>
+              <DialogActions>
+                <DialogTrigger disableButtonEnhancement>
+                  <Button appearance="subtle">Cancel</Button>
+                </DialogTrigger>
+                <Button
+                  appearance="primary"
+                  style={{ backgroundColor: tokens.colorStatusDangerBackground3 }}
+                  onClick={() => handleRevoke(inv.id)}
+                  disabled={revoking === inv.id}
+                >
+                  {revoking === inv.id ? <Spinner size="tiny" /> : 'Revoke'}
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
+      ),
+    }),
+  ]
 
   function handleRevoke(inviteId: string) {
     setRevoking(inviteId)
@@ -63,76 +118,41 @@ export function PendingInvitesTable({ invites: initial, onInviteRevoked }: Props
     })
   }
 
+  const filtered = search.trim()
+    ? invites.filter((inv) =>
+        [inv.email, inv.role].join(' ').toLowerCase().includes(search.toLowerCase()),
+      )
+    : invites
+
   return (
     <div className={styles.root}>
-      <div className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <Text size={300} weight="semibold">Pending Invites</Text>
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: 8 }}>
-            {invites.length} invite{invites.length !== 1 ? 's' : ''}
-          </Text>
+      <SpSectionCard
+        title="Pending Invites"
+        count={filtered.length}
+        countLabel="invite"
+        isEmpty={invites.length === 0}
+        emptyMessage="No pending invites. Use the Invite User button above to invite colleagues."
+      >
+        <div className={styles.toolbarWrapper}>
+          <SpGridToolbar search={search} onSearch={setSearch} searchPlaceholder="Search invites..." />
         </div>
-        {invites.length === 0 ? (
-          <div className={styles.empty}>
-            <Text size={200}>No pending invites. Use the button above to invite users.</Text>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHeaderCell>Email</TableHeaderCell>
-                <TableHeaderCell>Role</TableHeaderCell>
-                <TableHeaderCell>Sent</TableHeaderCell>
-                <TableHeaderCell>Expires</TableHeaderCell>
-                <TableHeaderCell style={{ width: 48 }}></TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invites.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell><Text size={200}>{inv.email}</Text></TableCell>
-                  <TableCell><Badge appearance="tint" color={ROLE_COLORS[inv.role] ?? 'informative'}>{inv.role}</Badge></TableCell>
-                  <TableCell><Text size={200}>{new Date(inv.sentAt).toLocaleDateString('en-GB', { month: 'short', day: '2-digit' })}</Text></TableCell>
-                  <TableCell><Text size={200}>{new Date(inv.expiresAt).toLocaleDateString('en-GB', { month: 'short', day: '2-digit' })}</Text></TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger disableButtonEnhancement>
-                        <Button
-                          icon={<DeleteRegular />}
-                          size="small"
-                          appearance="subtle"
-                          disabled={revoking === inv.id}
-                        />
-                      </DialogTrigger>
-                      <DialogSurface>
-                        <DialogBody>
-                          <DialogTitle>Revoke Invite</DialogTitle>
-                          <DialogContent>
-                            <Text>Revoke the invite to <strong>{inv.email}</strong>? They will not be able to accept it.</Text>
-                          </DialogContent>
-                          <DialogActions>
-                            <DialogTrigger disableButtonEnhancement>
-                              <Button appearance="subtle">Cancel</Button>
-                            </DialogTrigger>
-                            <Button
-                              appearance="primary"
-                              style={{ backgroundColor: tokens.colorStatusDangerBackground3 }}
-                              onClick={() => handleRevoke(inv.id)}
-                              disabled={revoking === inv.id}
-                            >
-                              {revoking === inv.id ? <Spinner size="tiny" /> : 'Revoke'}
-                            </Button>
-                          </DialogActions>
-                        </DialogBody>
-                      </DialogSurface>
-                    </Dialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+        <DataGrid items={filtered} columns={columns} sortable getRowId={(inv) => inv.id}>
+          <DataGridHeader>
+            <DataGridRow>
+              {({ renderHeaderCell }) => (
+                <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+              )}
+            </DataGridRow>
+          </DataGridHeader>
+          <DataGridBody<PendingInvite>>
+            {({ item, rowId }) => (
+              <DataGridRow key={rowId}>
+                {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+              </DataGridRow>
+            )}
+          </DataGridBody>
+        </DataGrid>
+      </SpSectionCard>
     </div>
   )
 }

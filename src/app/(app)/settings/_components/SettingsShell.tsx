@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import {
   makeStyles, tokens, Text,
-  TabList, Tab,
 } from '@fluentui/react-components'
+import { SpTabBar } from '@/components/ui/SpTabBar'
 import { GeneralSettingsForm } from './GeneralSettingsForm'
 import { StorageSettingsForm } from './StorageSettingsForm'
 import { SmtpSettingsForm } from './SmtpSettingsForm'
@@ -63,19 +63,22 @@ export function SettingsShell(props: SettingsData) {
   const styles = useStyles()
   const [tab, setTab] = useState<TabId>('general')
 
+  const settingsTabs = [
+    { value: 'general' as const, label: 'General' },
+    { value: 'storage' as const, label: 'Storage' },
+    { value: 'email' as const, label: 'Email (SMTP)' },
+    { value: 'notifications' as const, label: 'Notifications' },
+    { value: 'identity' as const, label: 'Identity' },
+    { value: 'users' as const, label: 'Users' },
+  ]
+
   return (
     <div className={styles.root}>
-      <TabList
+      <SpTabBar
+        tabs={settingsTabs}
         selectedValue={tab}
         onTabSelect={(_, d) => setTab(d.value as TabId)}
-      >
-        <Tab value="general">General</Tab>
-        <Tab value="storage">Storage</Tab>
-        <Tab value="email">Email (SMTP)</Tab>
-        <Tab value="notifications">Notifications</Tab>
-        <Tab value="identity">Identity</Tab>
-        <Tab value="users">Users</Tab>
-      </TabList>
+      />
 
       <div className={styles.tabContent}>
         {tab === 'general' && (

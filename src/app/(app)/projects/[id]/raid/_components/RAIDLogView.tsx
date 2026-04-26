@@ -7,13 +7,14 @@ import {
   Button,
   Badge,
   Text,
-  Table,
-  TableHeader,
-  TableHeaderCell,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableCellLayout,
+  DataGrid,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridBody,
+  DataGridRow,
+  DataGridCell,
+  createTableColumn,
+  type TableColumnDefinition,
   Dialog,
   DialogTrigger,
   DialogSurface,
@@ -31,10 +32,16 @@ import {
   DeleteRegular,
   WarningRegular,
 } from '@fluentui/react-icons'
+import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
+import { SpSectionCard } from '@/components/ui/SpSectionCard'
 import type { RAIDType, RAIDSeverity, RAIDStatus } from '@prisma/client'
-import type { RAIDItemWithCount } from '../page'
+import type { RAIDItem } from '@prisma/client'
 import { deleteRAIDItem } from '@/lib/actions/raid'
 import { RAIDItemDialog } from './RAIDItemDialog'
+
+export type RAIDItemWithCount = RAIDItem & {
+  _count: { deliverables: number }
+}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -79,12 +86,6 @@ const useStyles = makeStyles({
     alignItems: 'center',
     flexWrap: 'wrap',
   },
-  filterBar: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalM,
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
   filterGroup: {
     display: 'flex',
     gap: tokens.spacingHorizontalXS,
@@ -95,29 +96,9 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontWeight: tokens.fontWeightSemibold,
   },
-  tableContainer: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden',
-  },
   actionCell: {
     display: 'flex',
     gap: tokens.spacingHorizontalXS,
-  },
-  addButton: {
-    marginLeft: 'auto',
-  },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  emptyState: {
-    padding: `${tokens.spacingVerticalXL} ${tokens.spacingHorizontalL}`,
-    textAlign: 'center',
-    color: tokens.colorNeutralForeground3,
-    fontStyle: 'italic',
   },
 })
 
@@ -301,17 +282,149 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [search, setSearch] = useState('')
   const [editingItem, setEditingItem] = useState<RAIDItemWithCount | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   // Track deleted ids locally until revalidation
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
   const filteredItems = items.filter((item) => {
+    const q = search.trim().toLowerCase()
     if (deletedIds.has(item.id)) return false
     if (typeFilter !== 'all' && item.type !== typeFilter) return false
     if (statusFilter !== 'all' && item.status !== statusFilter) return false
+    if (q) {
+      const haystack = [
+        item.title,
+        item.description ?? '',
+        item.owner ?? '',
+        item.type,
+        item.severity,
+        item.status,
+      ].join(' ').toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
     return true
   })
+
+  const columns: TableColumnDefinition<RAIDItemWithCount>[] = [
+    createTableColumn({
+      columnId: 'type',
+      compare: (a, b) => a.type.localeCompare(b.type),
+      renderHeaderCell: () => 'Type',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
+          {TYPE_LABELS[item.type]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'title',
+      compare: (a, b) => a.title.localeCompare(b.title),
+      renderHeaderCell: () => 'Title',
+      renderCell: (item) => (
+        <div>
+          <Text size={300} weight={item.severity === 'critical' ? 'semibold' : 'regular'} block>
+            {item.title}
+          </Text>
+          {item.description && (
+            <Text
+              size={200}
+              style={{
+                color: tokens.colorNeutralForeground3,
+                display: 'block',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '360px',
+              }}
+            >
+              {item.description}
+            </Text>
+          )}
+        </div>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'severity',
+      compare: (a, b) => a.severity.localeCompare(b.severity),
+      renderHeaderCell: () => 'Severity',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={SEVERITY_COLORS[item.severity]} size="small">
+          {SEVERITY_LABELS[item.severity]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'status',
+      compare: (a, b) => a.status.localeCompare(b.status),
+      renderHeaderCell: () => 'Status',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={STATUS_COLORS[item.status]} size="small">
+          {STATUS_LABELS[item.status]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'owner',
+      compare: (a, b) => (a.owner ?? '').localeCompare(b.owner ?? ''),
+      renderHeaderCell: () => 'Owner',
+      renderCell: (item) => (
+        <Text size={200} style={{ color: item.owner ? undefined : tokens.colorNeutralForeground3 }}>
+          {item.owner ?? '-'}
+        </Text>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'dueDate',
+      compare: (a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0),
+      renderHeaderCell: () => 'Due Date',
+      renderCell: (item) => (
+        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+          {item.dueDate
+            ? new Date(item.dueDate).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })
+            : '-'}
+        </Text>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'linked',
+      compare: (a, b) => a._count.deliverables - b._count.deliverables,
+      renderHeaderCell: () => 'Linked',
+      renderCell: (item) =>
+        item._count.deliverables > 0 ? (
+          <Badge appearance="tint" color="informative" size="small">
+            {item._count.deliverables}
+          </Badge>
+        ) : (
+          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>-</Text>
+        ),
+    }),
+    createTableColumn({
+      columnId: 'actions',
+      compare: () => 0,
+      renderHeaderCell: () => 'Actions',
+      renderCell: (item) => (
+        <div className={styles.actionCell}>
+          <Button
+            appearance="subtle"
+            icon={<EditRegular />}
+            size="small"
+            aria-label="Edit RAID item"
+            onClick={() => setEditingItem(item)}
+          />
+          <DeleteConfirmDialog
+            item={item}
+            onDeleted={() => setDeletedIds((prev) => new Set(Array.from(prev).concat(item.id)))}
+          />
+        </div>
+      ),
+    }),
+  ]
 
   const typeButtons: { label: string; value: TypeFilter }[] = [
     { label: 'All', value: 'all' },
@@ -328,182 +441,87 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
     { label: 'Closed', value: 'closed' },
   ]
 
+  const filterPills = (
+    <>
+      <div className={styles.filterGroup}>
+        <span className={styles.filterLabel}>Type:</span>
+        {typeButtons.map((btn) => (
+          <Button
+            key={btn.value}
+            size="small"
+            appearance={typeFilter === btn.value ? 'primary' : 'subtle'}
+            onClick={() => setTypeFilter(btn.value)}
+          >
+            {btn.label}
+          </Button>
+        ))}
+      </div>
+      <div className={styles.filterGroup}>
+        <span className={styles.filterLabel}>Status:</span>
+        {statusButtons.map((btn) => (
+          <Button
+            key={btn.value}
+            size="small"
+            appearance={statusFilter === btn.value ? 'primary' : 'subtle'}
+            onClick={() => setStatusFilter(btn.value)}
+          >
+            {btn.label}
+          </Button>
+        ))}
+      </div>
+    </>
+  )
+
   return (
     <div className={styles.container}>
       <StatCards {...stats} />
 
-      {/* Filter bar + Add button */}
-      <div className={styles.filterBar}>
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Type:</span>
-          {typeButtons.map((btn) => (
-            <Button
-              key={btn.value}
-              size="small"
-              appearance={typeFilter === btn.value ? 'primary' : 'subtle'}
-              onClick={() => setTypeFilter(btn.value)}
-            >
-              {btn.label}
-            </Button>
-          ))}
-        </div>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Status:</span>
-          {statusButtons.map((btn) => (
-            <Button
-              key={btn.value}
-              size="small"
-              appearance={statusFilter === btn.value ? 'primary' : 'subtle'}
-              onClick={() => setStatusFilter(btn.value)}
-            >
-              {btn.label}
-            </Button>
-          ))}
-        </div>
-
-        <div style={{ marginLeft: 'auto' }}>
-          <Button
-            appearance="primary"
-            icon={<AddRegular />}
-            onClick={() => setCreateOpen(true)}
-          >
+      <SpSectionCard
+        title="RAID Items"
+        count={filteredItems.length}
+        countLabel="item"
+        actions={
+          <Button appearance="primary" icon={<AddRegular />} onClick={() => setCreateOpen(true)}>
             Add RAID Item
           </Button>
+        }
+        isEmpty={filteredItems.length === 0}
+        emptyMessage="No RAID items match the current filters."
+      >
+        <div style={{ padding: `0 ${tokens.spacingHorizontalL}` }}>
+          <SpGridToolbar
+            search={search}
+            onSearch={setSearch}
+            searchPlaceholder="Search RAID items..."
+            filters={filterPills}
+          />
         </div>
-      </div>
-
-      {/* Table */}
-      <div className={styles.tableContainer}>
-        <Table aria-label="RAID Log table" size="small">
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell style={{ width: '110px' }}>Type</TableHeaderCell>
-              <TableHeaderCell>Title</TableHeaderCell>
-              <TableHeaderCell style={{ width: '100px' }}>Severity</TableHeaderCell>
-              <TableHeaderCell style={{ width: '110px' }}>Status</TableHeaderCell>
-              <TableHeaderCell style={{ width: '130px' }}>Owner</TableHeaderCell>
-              <TableHeaderCell style={{ width: '110px' }}>Due Date</TableHeaderCell>
-              <TableHeaderCell style={{ width: '90px' }}>Linked</TableHeaderCell>
-              <TableHeaderCell style={{ width: '90px' }}>Actions</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredItems.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8}>
-                  <div className={styles.emptyState}>
-                    No RAID items match the current filters.
-                  </div>
-                </TableCell>
-              </TableRow>
+        <DataGrid
+          aria-label="RAID Log grid"
+          items={filteredItems}
+          columns={columns}
+          sortable
+          size="small"
+          getRowId={(item) => item.id}
+        >
+          <DataGridHeader>
+            <DataGridRow>
+              {({ renderHeaderCell }) => (
+                <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+              )}
+            </DataGridRow>
+          </DataGridHeader>
+          <DataGridBody<RAIDItemWithCount>>
+            {({ item, rowId }) => (
+              <DataGridRow key={rowId}>
+                {({ renderCell }) => (
+                  <DataGridCell>{renderCell(item)}</DataGridCell>
+                )}
+              </DataGridRow>
             )}
-            {filteredItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>
-                  <TableCellLayout>
-                    <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
-                      {TYPE_LABELS[item.type]}
-                    </Badge>
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <Text size={300} weight={item.severity === 'critical' ? 'semibold' : 'regular'}>
-                      {item.title}
-                    </Text>
-                    {item.description && (
-                      <Text
-                        size={200}
-                        style={{
-                          color: tokens.colorNeutralForeground3,
-                          display: 'block',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          maxWidth: '360px',
-                        }}
-                      >
-                        {item.description}
-                      </Text>
-                    )}
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <Badge
-                      appearance="tint"
-                      color={SEVERITY_COLORS[item.severity]}
-                      size="small"
-                    >
-                      {SEVERITY_LABELS[item.severity]}
-                    </Badge>
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <Badge
-                      appearance="tint"
-                      color={STATUS_COLORS[item.status]}
-                      size="small"
-                    >
-                      {STATUS_LABELS[item.status]}
-                    </Badge>
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <Text size={200} style={{ color: item.owner ? undefined : tokens.colorNeutralForeground3 }}>
-                      {item.owner ?? '—'}
-                    </Text>
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                      {item.dueDate
-                        ? new Date(item.dueDate).toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        : '—'}
-                    </Text>
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    {item._count.deliverables > 0 ? (
-                      <Badge appearance="tint" color="informative" size="small">
-                        {item._count.deliverables}
-                      </Badge>
-                    ) : (
-                      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
-                    )}
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell>
-                  <TableCellLayout>
-                    <div className={styles.actionCell}>
-                      <Button
-                        appearance="subtle"
-                        icon={<EditRegular />}
-                        size="small"
-                        aria-label="Edit RAID item"
-                        onClick={() => setEditingItem(item)}
-                      />
-                      <DeleteConfirmDialog
-                        item={item}
-                        onDeleted={() => setDeletedIds((prev) => new Set(Array.from(prev).concat(item.id)))}
-                      />
-                    </div>
-                  </TableCellLayout>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+          </DataGridBody>
+        </DataGrid>
+      </SpSectionCard>
 
       {/* Create dialog */}
       <RAIDItemDialog
