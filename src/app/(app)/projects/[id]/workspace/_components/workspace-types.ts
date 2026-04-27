@@ -9,7 +9,7 @@ import type {
 
 export type DeliverableWithOwner = DeliverableExecution & {
   owner?: Pick<Person, 'id' | 'name'> | null
-  _count: { raidLinks: number }
+  _count?: { raidLinks: number }
 }
 
 export type SubSectionWithDeliverables = SubSectionExecution & {

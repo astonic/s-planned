@@ -176,7 +176,7 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
       faChildren.push({ id: ss.id, kind: 'subsection', depth: 1, number: String(n++), name: ss.name, code: ss.code, ownerName: null, pct: ssPct, priority: 'Medium', startDate: ssStart, finishDate: ssFinish, total: ss.deliverables.length, closed: ssClosed, ancestorIds: [fa.id] })
 
       for (const d of toShow) {
-        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: pctForStatus(d.status), priority: priorityFor(d), status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, raidCount: d._count.raidLinks, ancestorIds: [fa.id, ss.id] })
+        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: pctForStatus(d.status), priority: priorityFor(d), status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, raidCount: d._count?.raidLinks ?? 0, ancestorIds: [fa.id, ss.id] })
       }
     }
 
