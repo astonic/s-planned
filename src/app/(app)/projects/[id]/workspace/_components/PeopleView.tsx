@@ -119,7 +119,7 @@ export function PeopleView({
         {groups.map((g) => {
           const total = g.deliverables.length
           const closed = g.deliverables.filter((d) => d.status === 'closed').length
-          const pct = total === 0 ? 0 : Math.round((closed / total) * 100)
+          const pct = total === 0 ? 0 : Math.round(g.deliverables.reduce((s, d) => s + d.progress, 0) / total)
           const isExpanded = expanded.has(g.id)
 
           const byStatus = (['planned', 'in_progress', 'delayed', 'closed'] as DeliverableStatus[])

@@ -88,7 +88,7 @@ export function ChartsView({ focusAreas }: { focusAreas: FocusAreaWithAll[] }) {
   const allDs = useMemo(() => flatDeliverables(focusAreas), [focusAreas])
   const total = allDs.length
   const closed = allDs.filter((d) => d.status === 'closed').length
-  const pct = total === 0 ? 0 : Math.round((closed / total) * 100)
+  const pct = total === 0 ? 0 : Math.round(allDs.reduce((s, d) => s + d.progress, 0) / total)
 
   const byStatus = useMemo(
     () => STATUSES.map((st) => ({ status: st, count: allDs.filter((d) => d.status === st).length })),
@@ -100,7 +100,7 @@ export function ChartsView({ focusAreas }: { focusAreas: FocusAreaWithAll[] }) {
       focusAreas.map((fa) => {
         const ds = fa.subSections.flatMap((ss) => ss.deliverables)
         const cl = ds.filter((d) => d.status === 'closed').length
-        return { name: fa.name, code: fa.code, total: ds.length, closed: cl, pct: ds.length === 0 ? 0 : Math.round((cl / ds.length) * 100) }
+        return { name: fa.name, code: fa.code, total: ds.length, closed: cl, pct: ds.length === 0 ? 0 : Math.round(ds.reduce((s, d) => s + d.progress, 0) / ds.length) }
       }),
     [focusAreas]
   )

@@ -84,8 +84,7 @@ export function WorkspaceView({ project }: { project: ProjectWorkspaceData }) {
   const [query, setQuery] = useState('')
 
   const allDs = useMemo(() => flatDeliverables(project.focusAreaExecutions), [project.focusAreaExecutions])
-  const closed = allDs.filter((d) => d.status === 'closed').length
-  const pct = allDs.length === 0 ? 0 : Math.round((closed / allDs.length) * 100)
+  const pct = allDs.length === 0 ? 0 : Math.round(allDs.reduce((s, d) => s + d.progress, 0) / allDs.length)
 
   return (
     <div className={s.root}>

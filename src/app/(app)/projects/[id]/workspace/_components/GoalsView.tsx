@@ -93,11 +93,11 @@ export function GoalsView({ focusAreas }: { focusAreas: FocusAreaWithAll[] }) {
         const ds = fa.subSections.flatMap((ss) => ss.deliverables)
         const total = ds.length
         const closed = ds.filter((d) => d.status === 'closed').length
-        const pct = total === 0 ? 0 : Math.round((closed / total) * 100)
+        const pct = total === 0 ? 0 : Math.round(ds.reduce((s, d) => s + d.progress, 0) / total)
         const byStatus = STATUSES.map((st) => ({ st, count: ds.filter((d) => d.status === st).length }))
         const ssStats = fa.subSections.map((ss) => {
           const ssClosed = ss.deliverables.filter((d) => d.status === 'closed').length
-          const ssPct = ss.deliverables.length === 0 ? 0 : Math.round((ssClosed / ss.deliverables.length) * 100)
+          const ssPct = ss.deliverables.length === 0 ? 0 : Math.round(ss.deliverables.reduce((s, d) => s + d.progress, 0) / ss.deliverables.length)
           return { id: ss.id, name: ss.name, code: ss.code, total: ss.deliverables.length, closed: ssClosed, pct: ssPct }
         })
         return { fa, total, closed, pct, byStatus, ssStats }

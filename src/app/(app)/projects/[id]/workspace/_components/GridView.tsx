@@ -20,7 +20,7 @@ import {
 } from '@fluentui/react-icons'
 import type { DeliverableStatus } from '@prisma/client'
 import type { FocusAreaWithAll, DeliverableWithOwner } from './workspace-types'
-import { dateMs, fmt, pctForStatus } from './workspace-types'
+import { dateMs, fmt } from './workspace-types'
 
 type SortKey = 'name' | 'owner' | 'pct' | 'priority' | 'start' | 'finish'
 type SortDir = 'asc' | 'desc'
@@ -35,6 +35,7 @@ type Row = {
   ownerName: string | null
   pct: number
   priority: 'Important' | 'Medium' | 'Low'
+  priorityLabel: string
   status?: DeliverableStatus
   startDate: Date | string | null
   finishDate: Date | string | null
@@ -120,11 +121,16 @@ const useStyles = makeStyles({
 })
 
 function priorityFor(d: DeliverableWithOwner): Row['priority'] {
-  if (d.status === 'delayed') return 'Important'
-  if (d.status === 'closed') return 'Medium'
-  if (d.targetDate && dateMs(d.targetDate) < Date.now()) return 'Important'
-  if (!d.targetDate) return 'Low'
+  if (d.priority === 'critical' || d.priority === 'high') return 'Important'
+  if (d.priority === 'low') return 'Low'
   return 'Medium'
+}
+
+const PRIORITY_LABEL: Record<string, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 }
 
 function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortKey, sortDir: SortDir): Row[] {
@@ -144,7 +150,7 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
 
   function cmp(a: DeliverableWithOwner, b: DeliverableWithOwner) {
     if (sortKey === 'owner') return ((a.owner?.name ?? '').localeCompare(b.owner?.name ?? '') || a.name.localeCompare(b.name)) * dir
-    if (sortKey === 'pct') return (pctForStatus(a.status) - pctForStatus(b.status)) * dir
+    if (sortKey === 'pct') return (a.progress - b.progress) * dir
     if (sortKey === 'priority') return (priRank(a) - priRank(b)) * dir
     if (sortKey === 'start') return (dateMs(a.startDate) - dateMs(b.startDate)) * dir
     if (sortKey === 'finish') return (dateMs(a.targetDate) - dateMs(b.targetDate)) * dir
@@ -157,7 +163,7 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
   for (const fa of focusAreas) {
     const faDs = fa.subSections.flatMap((ss) => ss.deliverables)
     const faClosed = faDs.filter((d) => d.status === 'closed').length
-    const faPct = faDs.length === 0 ? 0 : Math.round((faClosed / faDs.length) * 100)
+    const faPct = faDs.length === 0 ? 0 : Math.round(faDs.reduce((s, d) => s + d.progress, 0) / faDs.length)
     const faStart = faDs.reduce<Date | string | null>((m, d) => (!m || (d.startDate && dateMs(d.startDate) < dateMs(m)) ? d.startDate : m), null)
     const faFinish = faDs.reduce<Date | string | null>((m, d) => (!m || (d.targetDate && dateMs(d.targetDate) > dateMs(m)) ? d.targetDate : m), null)
     const faMatch = !q || `${fa.name} ${fa.code}`.toLowerCase().includes(q)
@@ -169,20 +175,20 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
       if (!faMatch && !ssMatch && toShow.length === 0) continue
 
       const ssClosed = ss.deliverables.filter((d) => d.status === 'closed').length
-      const ssPct = ss.deliverables.length === 0 ? 0 : Math.round((ssClosed / ss.deliverables.length) * 100)
+      const ssPct = ss.deliverables.length === 0 ? 0 : Math.round(ss.deliverables.reduce((s, d) => s + d.progress, 0) / ss.deliverables.length)
       const ssStart = ss.deliverables.reduce<Date | string | null>((m, d) => (!m || (d.startDate && dateMs(d.startDate) < dateMs(m)) ? d.startDate : m), null)
       const ssFinish = ss.deliverables.reduce<Date | string | null>((m, d) => (!m || (d.targetDate && dateMs(d.targetDate) > dateMs(m)) ? d.targetDate : m), null)
 
-      faChildren.push({ id: ss.id, kind: 'subsection', depth: 1, number: String(n++), name: ss.name, code: ss.code, ownerName: null, pct: ssPct, priority: 'Medium', startDate: ssStart, finishDate: ssFinish, total: ss.deliverables.length, closed: ssClosed, ancestorIds: [fa.id] })
+      faChildren.push({ id: ss.id, kind: 'subsection', depth: 1, number: String(n++), name: ss.name, code: ss.code, ownerName: null, pct: ssPct, priority: 'Medium', priorityLabel: '', startDate: ssStart, finishDate: ssFinish, total: ss.deliverables.length, closed: ssClosed, ancestorIds: [fa.id] })
 
       for (const d of toShow) {
-        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: pctForStatus(d.status), priority: priorityFor(d), status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, raidCount: d._count?.raidLinks ?? 0, ancestorIds: [fa.id, ss.id] })
+        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: d.progress, priority: priorityFor(d), priorityLabel: PRIORITY_LABEL[d.priority] ?? d.priority, status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, raidCount: d._count?.raidLinks ?? 0, ancestorIds: [fa.id, ss.id] })
       }
     }
 
     if (!faMatch && faChildren.length === 0) continue
 
-    rows.push({ id: fa.id, kind: 'focus', depth: 0, number: String(n++), name: fa.name, code: fa.code, ownerName: null, pct: faPct, priority: 'Medium', startDate: faStart, finishDate: faFinish, total: faDs.length, closed: faClosed, ancestorIds: [] })
+    rows.push({ id: fa.id, kind: 'focus', depth: 0, number: String(n++), name: fa.name, code: fa.code, ownerName: null, pct: faPct, priority: 'Medium', priorityLabel: '', startDate: faStart, finishDate: faFinish, total: faDs.length, closed: faClosed, ancestorIds: [] })
     rows.push(...faChildren)
   }
 
@@ -298,7 +304,10 @@ export function GridView({
                 </div>
                 <div className={`${s.cell} ${s.priorityCell}`} role="cell">
                   {row.priority === 'Important' ? <span className={s.pipImportant}>!</span> : row.priority === 'Low' ? <span className={s.pipLow}>↓</span> : <span className={s.pipMedium} />}
-                  <Text size={200}>{row.priority}</Text>
+                  {row.priorityLabel
+                    ? <Text size={200}>{row.priorityLabel}</Text>
+                    : <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
+                  }
                 </div>
                 <div className={s.cell} role="cell">
                   {row.raidCount ? (
