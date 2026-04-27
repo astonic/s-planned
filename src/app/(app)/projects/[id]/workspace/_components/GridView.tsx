@@ -6,6 +6,7 @@ import {
   makeStyles,
   tokens,
   Avatar,
+  Badge,
   Button,
   Text,
 } from '@fluentui/react-components'
@@ -40,10 +41,11 @@ type Row = {
   deliverableId?: string
   total?: number
   closed?: number
+  raidCount?: number
   ancestorIds: string[]
 }
 
-const COL = '48px minmax(300px, 1.8fr) 160px 156px 120px 128px 128px'
+const COL = '48px minmax(300px, 1.8fr) 160px 156px 120px 64px 128px 128px'
 
 const useStyles = makeStyles({
   scroller: { overflow: 'auto', flex: 1, maxHeight: 'calc(100vh - 300px)' },
@@ -174,7 +176,7 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
       faChildren.push({ id: ss.id, kind: 'subsection', depth: 1, number: String(n++), name: ss.name, code: ss.code, ownerName: null, pct: ssPct, priority: 'Medium', startDate: ssStart, finishDate: ssFinish, total: ss.deliverables.length, closed: ssClosed, ancestorIds: [fa.id] })
 
       for (const d of toShow) {
-        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: pctForStatus(d.status), priority: priorityFor(d), status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, ancestorIds: [fa.id, ss.id] })
+        faChildren.push({ id: d.id, kind: 'deliverable', depth: 2, number: String(n++), name: d.name, code: d.code, ownerName: d.owner?.name ?? null, pct: pctForStatus(d.status), priority: priorityFor(d), status: d.status, startDate: d.startDate, finishDate: d.targetDate, deliverableId: d.id, raidCount: d._count.raidLinks, ancestorIds: [fa.id, ss.id] })
       }
     }
 
@@ -231,10 +233,20 @@ export function GridView({
       <div className={s.grid} role="table" aria-label="Deliverables grid">
         <div className={s.headerRow} role="row">
           <div className={`${s.hCell} ${s.numCell}`} role="columnheader">#</div>
-          {(['name', 'owner', 'pct', 'priority', 'start', 'finish'] as SortKey[]).map((key, i) => (
+          {(['name', 'owner', 'pct', 'priority'] as SortKey[]).map((key, i) => (
             <div key={key} className={s.hCell} role="columnheader">
               <Button appearance="transparent" className={`${s.sortBtn} ${sortKey === key ? s.sortBtnActive : ''}`} onClick={() => toggleSort(key)}>
-                {(['Name', 'Assigned to', '% complete', 'Priority', 'Start', 'Finish'])[i]}{si(key)}
+                {(['Name', 'Assigned to', '% complete', 'Priority'])[i]}{si(key)}
+              </Button>
+            </div>
+          ))}
+          <div className={s.hCell} role="columnheader">
+            <Text size={100} style={{ color: tokens.colorNeutralForeground3, fontWeight: tokens.fontWeightSemibold, padding: '0 4px' }}>RAID</Text>
+          </div>
+          {(['start', 'finish'] as SortKey[]).map((key, i) => (
+            <div key={key} className={s.hCell} role="columnheader">
+              <Button appearance="transparent" className={`${s.sortBtn} ${sortKey === key ? s.sortBtnActive : ''}`} onClick={() => toggleSort(key)}>
+                {(['Start', 'Finish'])[i]}{si(key)}
               </Button>
             </div>
           ))}
@@ -287,6 +299,13 @@ export function GridView({
                 <div className={`${s.cell} ${s.priorityCell}`} role="cell">
                   {row.priority === 'Important' ? <span className={s.pipImportant}>!</span> : row.priority === 'Low' ? <span className={s.pipLow}>↓</span> : <span className={s.pipMedium} />}
                   <Text size={200}>{row.priority}</Text>
+                </div>
+                <div className={s.cell} role="cell">
+                  {row.raidCount ? (
+                    <Badge appearance="tint" color="danger" size="small">{row.raidCount}</Badge>
+                  ) : (
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
+                  )}
                 </div>
                 <div className={row.startDate ? s.startCell : `${s.cell} ${s.finishCell}`} role="cell">
                   <Text size={200}>{fmt(row.startDate)}</Text>

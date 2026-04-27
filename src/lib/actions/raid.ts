@@ -283,3 +283,43 @@ export async function unlinkRAIDFromDeliverable(
     return { ok: false, error: (e as Error).message }
   }
 }
+
+export interface LinkedDeliverableRow {
+  id: string
+  code: string
+  name: string
+  status: string
+}
+
+export async function getRAIDLinkedDeliverables(
+  raidItemId: string,
+): Promise<ActionResult<LinkedDeliverableRow[]>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+
+    const links = await prisma.rAIDItemDeliverable.findMany({
+      where: {
+        raidItemId,
+        raidItem: { organizationId: orgId },
+      },
+      select: {
+        deliverableExecution: {
+          select: { id: true, code: true, name: true, status: true },
+        },
+      },
+    })
+
+    return {
+      ok: true,
+      data: links.map((l) => ({
+        id: l.deliverableExecution.id,
+        code: l.deliverableExecution.code,
+        name: l.deliverableExecution.name,
+        status: l.deliverableExecution.status,
+      })),
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}

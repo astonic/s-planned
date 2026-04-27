@@ -50,6 +50,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
                 orderBy: { code: 'asc' },
                 include: {
                   owner: true,
+                  _count: { select: { raidLinks: true } },
                 },
               },
             },

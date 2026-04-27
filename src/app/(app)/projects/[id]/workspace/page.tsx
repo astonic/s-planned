@@ -35,6 +35,7 @@ export default async function ProjectWorkspacePage({ params }: Props) {
                 orderBy: { code: 'asc' },
                 include: {
                   owner: true,
+                  _count: { select: { raidLinks: true } },
                 },
               },
             },
