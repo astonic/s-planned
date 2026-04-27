@@ -8,6 +8,7 @@ import {
   Text,
   Badge,
   Select,
+  Slider,
   Input,
   Textarea,
   Tab,
@@ -32,7 +33,7 @@ import type {
   Person,
   Vendor,
 } from '@prisma/client'
-import { updateDeliverableStatus, updateDeliverableField } from '@/lib/actions/projects'
+import { updateDeliverableStatus, updateDeliverableField, updateDeliverableProgress, updateDeliverablePriority } from '@/lib/actions/projects'
 import {
   setDeliverableOwner,
   linkPersonToDeliverable,
@@ -416,6 +417,20 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
     setCurrentStatus(newStatus)
     startStatusTransition(async () => { await updateDeliverableStatus(deliverable.id, newStatus); router.refresh() })
   }
+
+  const [currentProgress, setCurrentProgress] = useState<number>((deliverable as DeliverableExecution & { progress?: number }).progress ?? 0)
+  const [progressPending, startProgressTransition] = useTransition()
+  function handleProgressChange(value: number) {
+    setCurrentProgress(value)
+    startProgressTransition(async () => { await updateDeliverableProgress(deliverable.id, value); router.refresh() })
+  }
+
+  const [currentPriority, setCurrentPriority] = useState<string>((deliverable as DeliverableExecution & { priority?: string }).priority ?? 'medium')
+  const [priorityPending, startPriorityTransition] = useTransition()
+  function handlePriorityChange(value: string) {
+    setCurrentPriority(value)
+    startPriorityTransition(async () => { await updateDeliverablePriority(deliverable.id, value as 'low' | 'medium' | 'high' | 'critical'); router.refresh() })
+  }
   const [nameValue, setNameValue] = useState(deliverable.name)
   const [namePending, startNameTransition] = useTransition()
   const [nameSuccess, setNameSuccess] = useState(false)
@@ -614,6 +629,33 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                       {STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </Select>
                   )}
+                </Field>
+                <Field label="Priority">
+                  {priorityPending ? <Spinner size="tiny" /> : (
+                    <Select value={currentPriority} onChange={(_, d) => handlePriorityChange(d.value)}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="critical">Critical</option>
+                    </Select>
+                  )}
+                </Field>
+                <Field
+                  label={`Progress — ${currentProgress}%`}
+                  style={{ gridColumn: '1 / -1' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM }}>
+                    <Slider
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={currentProgress}
+                      onChange={(_, d) => handleProgressChange(d.value)}
+                      disabled={progressPending}
+                      style={{ flex: 1 }}
+                    />
+                    {progressPending && <Spinner size="tiny" />}
+                  </div>
                 </Field>
                 <Field label="Owner">
                   {ownerPending ? <Spinner size="tiny" /> : deliverable.owner ? (

@@ -542,6 +542,8 @@ model DeliverableExecution {
   targetDate DateTime?
   closedAt   DateTime?
   notes      String?   @db.Text
+  progress   Int       @default(0)
+  priority   String    @default("medium")
 
   subSectionExecution SubSectionExecution  @relation(fields: [subSectionExecutionId], references: [id], onDelete: Cascade)
   auditEvents         AuditEvent[]

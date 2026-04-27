@@ -521,6 +521,81 @@ export async function updateDeliverableField(
   }
 }
 
+export async function updateDeliverableProgress(
+  id: string,
+  progress: number,
+): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const clamped = Math.max(0, Math.min(100, Math.round(progress)))
+
+    await withTenant(orgId, async (tx) => {
+      const existing = await tx.deliverableExecution.findUniqueOrThrow({
+        where: { id, organizationId: orgId },
+        select: { name: true, subSectionExecution: { select: { focusAreaExecution: { select: { projectId: true } } } } },
+      })
+      const projectId = existing.subSectionExecution.focusAreaExecution.projectId
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
+
+      await tx.deliverableExecution.update({ where: { id }, data: { progress: clamped } })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId,
+          deliverableExecutionId: id,
+          actorName: auth.userName,
+          eventType: 'deliverable.updated',
+          description: `Updated progress to ${clamped}% on "${existing.name}"`,
+          metadata: { field: 'progress', value: clamped },
+        },
+      })
+    })
+
+    return { ok: true, data: undefined }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+export async function updateDeliverablePriority(
+  id: string,
+  priority: 'low' | 'medium' | 'high' | 'critical',
+): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+
+    await withTenant(orgId, async (tx) => {
+      const existing = await tx.deliverableExecution.findUniqueOrThrow({
+        where: { id, organizationId: orgId },
+        select: { name: true, subSectionExecution: { select: { focusAreaExecution: { select: { projectId: true } } } } },
+      })
+      const projectId = existing.subSectionExecution.focusAreaExecution.projectId
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
+
+      await tx.deliverableExecution.update({ where: { id }, data: { priority } })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId,
+          deliverableExecutionId: id,
+          actorName: auth.userName,
+          eventType: 'deliverable.updated',
+          description: `Updated priority to "${priority}" on "${existing.name}"`,
+          metadata: { field: 'priority', value: priority },
+        },
+      })
+    })
+
+    return { ok: true, data: undefined }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
 // ── Search ────────────────────────────────────────────────────────────────────
 
 export interface SearchDeliverableResult {
