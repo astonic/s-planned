@@ -109,12 +109,9 @@ export function RaidTab({ byType, bySeverity, byStatus, openCount, criticalOpenC
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={typeData} cx="50%" cy="50%" outerRadius={80} dataKey="value" paddingAngle={2}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {typeData.map((e, i) => <Cell key={i} fill={e.color} />)}
-              </Pie>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              </Pie>              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>

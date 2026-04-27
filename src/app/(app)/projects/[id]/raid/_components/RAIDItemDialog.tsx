@@ -23,7 +23,7 @@ import {
   tokens,
 } from '@fluentui/react-components'
 import { createRAIDItem, updateRAIDItem } from '@/lib/actions/raid'
-import type { RAIDItemWithCount } from '../page'
+import type { RAIDItemWithCount } from './RAIDLogView'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 

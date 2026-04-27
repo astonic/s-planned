@@ -13,6 +13,14 @@ import {
   Input,
   Select,
   Button,
+  DataGrid,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridBody,
+  DataGridRow,
+  DataGridCell,
+  createTableColumn,
+  type TableColumnDefinition,
 } from '@fluentui/react-components'
 import type { ProjectStatus, ProjectPhase } from '@prisma/client'
 import { getProjectActivityPage } from '@/lib/actions/activity'
@@ -453,6 +461,55 @@ export function ProjectOverview({
   const statusCfg = STATUS_CONFIG[projectStatus]
   const openItems = byStatus.planned + byStatus.in_progress + byStatus.delayed
   const readColor = readinessColor(readinessPct)
+  const focusAreaColumns: TableColumnDefinition<FocusAreaStat>[] = [
+    createTableColumn({
+      columnId: 'focusArea',
+      compare: (a, b) => a.name.localeCompare(b.name),
+      renderHeaderCell: () => 'Focus Area',
+      renderCell: (fa) => (
+        <div>
+          <Text className={styles.focusAreaName} block>
+            {fa.name}
+          </Text>
+          <Text className={styles.focusAreaCode}>{fa.code}</Text>
+        </div>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'total',
+      compare: (a, b) => a.total - b.total,
+      renderHeaderCell: () => 'Deliverables',
+      renderCell: (fa) => <Text>{fa.total}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'closed',
+      compare: (a, b) => a.closed - b.closed,
+      renderHeaderCell: () => 'Closed',
+      renderCell: (fa) => <Text>{fa.closed}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'progress',
+      compare: (a, b) => a.pct - b.pct,
+      renderHeaderCell: () => 'Progress',
+      renderCell: (fa) => {
+        const barColor = focusAreaBarColor(fa.pct)
+        return (
+          <div style={{ minWidth: 160 }}>
+            <div className={styles.progressLabel}>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                {fa.pct}%
+              </Text>
+            </div>
+            <ProgressBar
+              value={fa.total === 0 ? 0 : fa.closed / fa.total}
+              style={{ '--fui-ProgressBar-bar-color': barColor } as React.CSSProperties}
+              thickness="medium"
+            />
+          </div>
+        )
+      },
+    }),
+  ]
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
@@ -566,45 +623,22 @@ export function ProjectOverview({
             Focus Area Progress
           </Text>
           <Card className={styles.tableCard}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.th}>Focus Area</th>
-                  <th className={styles.thRight}>Deliverables</th>
-                  <th className={styles.thRight}>Closed</th>
-                  <th className={styles.th} style={{ width: '220px' }}>Progress</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byFocusArea.map((fa) => {
-                  const barColor = focusAreaBarColor(fa.pct)
-                  return (
-                    <tr key={fa.code}>
-                      <td className={styles.td}>
-                        <Text className={styles.focusAreaName} block>
-                          {fa.name}
-                        </Text>
-                        <Text className={styles.focusAreaCode}>{fa.code}</Text>
-                      </td>
-                      <td className={styles.tdRight}>{fa.total}</td>
-                      <td className={styles.tdRight}>{fa.closed}</td>
-                      <td className={styles.tdProgress}>
-                        <div className={styles.progressLabel}>
-                          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                            {fa.pct}%
-                          </Text>
-                        </div>
-                        <ProgressBar
-                          value={fa.total === 0 ? 0 : fa.closed / fa.total}
-                          style={{ '--fui-ProgressBar-bar-color': barColor } as React.CSSProperties}
-                          thickness="medium"
-                        />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <DataGrid items={byFocusArea} columns={focusAreaColumns} sortable getRowId={(fa) => fa.code}>
+              <DataGridHeader>
+                <DataGridRow>
+                  {({ renderHeaderCell }) => (
+                    <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                  )}
+                </DataGridRow>
+              </DataGridHeader>
+              <DataGridBody<FocusAreaStat>>
+                {({ item, rowId }) => (
+                  <DataGridRow key={rowId}>
+                    {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                  </DataGridRow>
+                )}
+              </DataGridBody>
+            </DataGrid>
           </Card>
         </div>
       )}

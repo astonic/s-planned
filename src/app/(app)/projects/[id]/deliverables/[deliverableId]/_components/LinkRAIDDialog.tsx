@@ -12,12 +12,21 @@ import {
   DialogContent,
   Button,
   Badge,
+  Input,
   Text,
   Spinner,
+  DataGrid,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridBody,
+  DataGridRow,
+  DataGridCell,
+  createTableColumn,
+  type TableColumnDefinition,
   makeStyles,
   tokens,
 } from '@fluentui/react-components'
-import { LinkRegular } from '@fluentui/react-icons'
+import { LinkRegular, SearchRegular } from '@fluentui/react-icons'
 import type { RAIDType, RAIDSeverity, RAIDStatus } from '@prisma/client'
 import { linkRAIDToDeliverable } from '@/lib/actions/raid'
 
@@ -47,15 +56,7 @@ const useStyles = makeStyles({
     maxHeight: '400px',
     overflowY: 'auto',
   },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: tokens.spacingHorizontalS,
-    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
+  search: { marginBottom: tokens.spacingVerticalM },
   title: {
     flex: 1,
     fontWeight: tokens.fontWeightSemibold,
@@ -99,9 +100,15 @@ const SEVERITY_LABELS: Record<RAIDSeverity, string> = {
   critical: 'Critical',
 }
 
+const STATUS_LABELS: Record<RAIDStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  closed: 'Closed',
+}
+
 // ── Row component ─────────────────────────────────────────────────────────────
 
-function RAIDRow({
+function LinkButton({
   item,
   deliverableId,
   onLinked,
@@ -110,7 +117,6 @@ function RAIDRow({
   deliverableId: string
   onLinked: () => void
 }) {
-  const styles = useStyles()
   const [isPending, startTransition] = useTransition()
 
   function handleLink() {
@@ -121,24 +127,15 @@ function RAIDRow({
   }
 
   return (
-    <div className={styles.row}>
-      <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
-        {TYPE_LABELS[item.type]}
-      </Badge>
-      <Text className={styles.title}>{item.title}</Text>
-      <Badge appearance="tint" color={SEVERITY_COLORS[item.severity]} size="small">
-        {SEVERITY_LABELS[item.severity]}
-      </Badge>
-      <Button
-        size="small"
-        appearance="primary"
-        icon={isPending ? <Spinner size="tiny" /> : <LinkRegular />}
-        disabled={isPending}
-        onClick={handleLink}
-      >
-        Link
-      </Button>
-    </div>
+    <Button
+      size="small"
+      appearance="primary"
+      icon={isPending ? <Spinner size="tiny" /> : <LinkRegular />}
+      disabled={isPending}
+      onClick={handleLink}
+    >
+      Link
+    </Button>
   )
 }
 
@@ -148,8 +145,56 @@ export function LinkRAIDDialog({ deliverableId, projectRAID, linkedIds }: Props)
   const styles = useStyles()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
 
   const available = projectRAID.filter((item) => !linkedIds.has(item.id))
+  const filtered = available.filter((item) => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    return [item.title, item.type, item.severity, item.status].join(' ').toLowerCase().includes(q)
+  })
+  const columns: TableColumnDefinition<RAIDItemSummary>[] = [
+    createTableColumn({
+      columnId: 'type',
+      compare: (a, b) => a.type.localeCompare(b.type),
+      renderHeaderCell: () => 'Type',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
+          {TYPE_LABELS[item.type]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'title',
+      compare: (a, b) => a.title.localeCompare(b.title),
+      renderHeaderCell: () => 'Title',
+      renderCell: (item) => <Text className={styles.title}>{item.title}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'severity',
+      compare: (a, b) => a.severity.localeCompare(b.severity),
+      renderHeaderCell: () => 'Severity',
+      renderCell: (item) => (
+        <Badge appearance="tint" color={SEVERITY_COLORS[item.severity]} size="small">
+          {SEVERITY_LABELS[item.severity]}
+        </Badge>
+      ),
+    }),
+    createTableColumn({
+      columnId: 'status',
+      compare: (a, b) => a.status.localeCompare(b.status),
+      renderHeaderCell: () => 'Status',
+      renderCell: (item) => <Text size={200}>{STATUS_LABELS[item.status]}</Text>,
+    }),
+    createTableColumn({
+      columnId: 'action',
+      compare: () => 0,
+      renderHeaderCell: () => '',
+      renderCell: (item) => (
+        <LinkButton item={item} deliverableId={deliverableId} onLinked={handleLinked} />
+      ),
+    }),
+  ]
 
   function handleLinked() {
     router.refresh()
@@ -174,14 +219,33 @@ export function LinkRAIDDialog({ deliverableId, projectRAID, linkedIds }: Props)
               </Text>
             ) : (
               <div className={styles.list}>
-                {available.map((item) => (
-                  <RAIDRow
-                    key={item.id}
-                    item={item}
-                    deliverableId={deliverableId}
-                    onLinked={handleLinked}
-                  />
-                ))}
+                <Input
+                  className={styles.search}
+                  placeholder="Search RAID items..."
+                  contentBefore={<SearchRegular />}
+                  value={query}
+                  onChange={(_, d) => setQuery(d.value)}
+                />
+                {filtered.length === 0 ? (
+                  <Text className={styles.empty}>No RAID items match your search.</Text>
+                ) : (
+                  <DataGrid items={filtered} columns={columns} sortable size="small" getRowId={(item) => item.id}>
+                    <DataGridHeader>
+                      <DataGridRow>
+                        {({ renderHeaderCell }) => (
+                          <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+                        )}
+                      </DataGridRow>
+                    </DataGridHeader>
+                    <DataGridBody<RAIDItemSummary>>
+                      {({ item, rowId }) => (
+                        <DataGridRow key={rowId}>
+                          {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+                        </DataGridRow>
+                      )}
+                    </DataGridBody>
+                  </DataGrid>
+                )}
               </div>
             )}
           </DialogContent>

@@ -4,14 +4,11 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { RAIDLogView } from './_components/RAIDLogView'
-import type { RAIDItem, RAIDType, RAIDSeverity, RAIDStatus } from '@prisma/client'
+import type { RAIDSeverity } from '@prisma/client'
+import type { RAIDItemWithCount } from './_components/RAIDLogView'
 
 interface Props {
   params: { id: string }
-}
-
-export type RAIDItemWithCount = RAIDItem & {
-  _count: { deliverables: number }
 }
 
 export default async function RAIDLogPage({ params }: Props) {

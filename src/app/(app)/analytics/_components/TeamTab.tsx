@@ -27,8 +27,21 @@ export interface TeamTabProps {
   totalVendors: number
 }
 
-const PERSON_COLORS = ['#0078D4', '#107C10', '#FF8C00', '#605E5C', '#C50F1F', '#8764B8']
-const VENDOR_COLORS = ['#0078D4', '#107C10', '#FF8C00', '#605E5C', '#C50F1F']
+const PERSON_COLORS = [
+  'var(--sp-blue-400)',
+  'var(--sp-success)',
+  'var(--sp-warning)',
+  'var(--sp-gray-400)',
+  'var(--sp-danger)',
+  'var(--sp-teal)',
+]
+const VENDOR_COLORS = [
+  'var(--sp-blue-400)',
+  'var(--sp-success)',
+  'var(--sp-warning)',
+  'var(--sp-gray-400)',
+  'var(--sp-danger)',
+]
 
 const PERSON_TYPE_LABELS: Record<string, string> = {
   internal: 'Internal',
@@ -79,12 +92,17 @@ const useStyles = makeStyles({
   },
   progressBar: {
     flex: 1,
-    height: '6px',
-    borderRadius: '3px',
-    backgroundColor: tokens.colorNeutralBackground3,
+    height: '8px',
+    borderRadius: 'var(--sp-radius-pill)',
+    backgroundColor: 'var(--sp-gray-100)',
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: '3px', backgroundColor: tokens.colorBrandBackground },
+  progressFill: {
+    height: '100%',
+    borderRadius: 'var(--sp-radius-pill)',
+    background: 'var(--sp-grad-primary)',
+    boxShadow: 'var(--sp-glow-blue)',
+  },
 })
 
 export function TeamTab({ byPersonType, byVendorType, topPeople, totalPeople, totalVendors }: TeamTabProps) {
@@ -122,12 +140,9 @@ export function TeamTab({ byPersonType, byVendorType, topPeople, totalPeople, to
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={personData} cx="50%" cy="50%" outerRadius={80} dataKey="value" paddingAngle={2}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {personData.map((_, i) => <Cell key={i} fill={PERSON_COLORS[i % PERSON_COLORS.length]} />)}
-              </Pie>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              </Pie>              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
@@ -143,12 +158,9 @@ export function TeamTab({ byPersonType, byVendorType, topPeople, totalPeople, to
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={vendorData} cx="50%" cy="50%" outerRadius={80} dataKey="value" paddingAngle={2}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
                 {vendorData.map((_, i) => <Cell key={i} fill={VENDOR_COLORS[i % VENDOR_COLORS.length]} />)}
-              </Pie>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              </Pie>              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>

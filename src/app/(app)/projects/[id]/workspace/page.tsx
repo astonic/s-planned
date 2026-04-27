@@ -25,7 +25,12 @@ export default async function ProjectWorkspacePage({ params }: Props) {
           subSections: {
             orderBy: { order: 'asc' },
             include: {
-              deliverables: { orderBy: { code: 'asc' } },
+              deliverables: {
+                orderBy: { code: 'asc' },
+                include: {
+                  owner: true,
+                },
+              },
             },
           },
         },

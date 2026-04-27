@@ -104,7 +104,7 @@ function statusBadge(status: ProjectStatus) {
 
 function formatDate(d: Date | null) {
   if (!d) return null
-  return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

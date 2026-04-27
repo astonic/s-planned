@@ -161,7 +161,7 @@ export default function LoginPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
             { label: 'Owner', email: 'admin@example.com', password: 'password123', color: '#C4314B' },
-            { label: 'Member', email: 'member@example.com', password: 'password123', color: '#1474CB' },
+            { label: 'Member', email: 'member@example.com', password: 'password123', color: 'var(--sp-blue-500)' },
             { label: 'Viewer', email: 'viewer@example.com', password: 'password123', color: '#13A10E' },
           ].map(({ label, email, password, color }) => (
             <button

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
-import { PageHeader } from '@/components/layout/PageHeader'
 import { DeliverableDetail } from './_components/DeliverableDetail'
 
 interface Props {
@@ -144,17 +144,63 @@ export default async function DeliverableDetailPage({ params }: Props) {
   })
 
   return (
-    <>
-      <PageHeader
-        title={deliverable.name}
-        breadcrumb={[
-          { label: 'Projects', href: '/projects' },
-          { label: project.name, href: `/projects/${project.id}` },
-          { label: 'Workspace', href: `/projects/${project.id}/workspace` },
-          { label: deliverable.name },
-        ]}
-      />
-      <div style={{ padding: '24px' }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={deliverable.name}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: '#F5F7FB',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          height: 56,
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          padding: '0 24px',
+          borderBottom: '1px solid #DDE3EA',
+          background: '#FFFFFF',
+          boxShadow: '0 1px 2px rgba(15, 30, 61, 0.08)',
+        }}
+      >
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ color: '#64748B', fontSize: 12, fontWeight: 700, letterSpacing: 0.4 }}>
+            Projects / {project.name} / Deliverables
+          </div>
+          <div style={{ color: '#172033', fontSize: 16, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {deliverable.name}
+          </div>
+        </div>
+        <Link
+          href={`/projects/${project.id}`}
+          aria-label="Close deliverable details"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 4,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#334155',
+            textDecoration: 'none',
+            border: '1px solid #DDE3EA',
+            background: '#FFFFFF',
+            fontSize: 22,
+            lineHeight: 1,
+          }}
+        >
+          X
+        </Link>
+      </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
         <DeliverableDetail
           deliverable={deliverable}
           projectId={project.id}
@@ -171,6 +217,6 @@ export default async function DeliverableDetailPage({ params }: Props) {
           deliverableNotes={noteRows}
         />
       </div>
-    </>
+    </div>
   )
 }

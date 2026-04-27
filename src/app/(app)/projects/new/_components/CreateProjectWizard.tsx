@@ -420,7 +420,7 @@ function Step3Confirm({
 
   function formatDate(d: string | undefined) {
     if (!d) return '—'
-    return new Date(d).toLocaleDateString(undefined, {
+    return new Date(d).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

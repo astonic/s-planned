@@ -19,7 +19,9 @@ import {
   Avatar,
   Combobox,
   Option,
+  Checkbox,
 } from '@fluentui/react-components'
+import { DismissCircleRegular } from '@fluentui/react-icons'
 import type {
   DeliverableExecution,
   DeliverableStatus,
@@ -40,6 +42,7 @@ import {
 } from '@/lib/actions/stakeholders'
 import { getDeliverableActivityPage } from '@/lib/actions/activity'
 import { unlinkRAIDFromDeliverable } from '@/lib/actions/raid'
+import { toggleCriteriaCompletion } from '@/lib/actions/evidence'
 import { LinkRAIDDialog } from './LinkRAIDDialog'
 import type { RAIDItemSummary } from './LinkRAIDDialog'
 import { EvidenceTab } from './EvidenceTab'
@@ -49,9 +52,159 @@ import type { NoteItem } from './NotesTab'
 
 // Styles
 const useStyles = makeStyles({
-  layout: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: tokens.spacingHorizontalXL, alignItems: 'start' },
+  layout: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(720px, 1fr) 320px',
+    gap: 0,
+    alignItems: 'stretch',
+    maxWidth: '1180px',
+    margin: '0 auto',
+    minHeight: 'calc(100vh - 180px)',
+    '@media (max-width: 1100px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalL,
+    },
+  },
   leftPanel: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
   rightPanel: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
+  taskSurface: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRight: 'none',
+    boxShadow: tokens.shadow16,
+    minHeight: '100%',
+    padding: '34px 36px',
+    '@media (max-width: 1100px)': {
+      borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
+    },
+    '@media (max-width: 720px)': {
+      padding: tokens.spacingHorizontalL,
+    },
+  },
+  taskHeader: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, marginBottom: tokens.spacingVerticalL },
+  taskKicker: { color: tokens.colorBrandForeground1, fontSize: tokens.fontSizeBase200, fontWeight: tokens.fontWeightSemibold },
+  titleRow: { display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr)', gap: tokens.spacingHorizontalS, alignItems: 'center' },
+  statusDot: {
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    border: `2px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  statusDotClosed: { border: `2px solid ${tokens.colorStatusSuccessBorderActive}`, backgroundColor: tokens.colorStatusSuccessBackground3 },
+  titleInput: {
+    width: '100%',
+    '& input': {
+      fontSize: tokens.fontSizeBase500,
+      fontWeight: tokens.fontWeightSemibold,
+    },
+  },
+  headerMeta: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, flexWrap: 'wrap', paddingLeft: '30px' },
+  compactAvatarRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS },
+  plannerGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) 324px',
+    gap: tokens.spacingHorizontalXXL,
+    alignItems: 'start',
+    '@media (max-width: 900px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+  detailsColumn: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL, minWidth: 0 },
+  sideColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalL,
+    minWidth: 0,
+    borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
+    paddingLeft: tokens.spacingHorizontalXL,
+    '@media (max-width: 900px)': {
+      borderLeft: 'none',
+      paddingLeft: 0,
+    },
+  },
+  descriptionBox: {
+    width: '100%',
+    '& textarea': {
+      minHeight: '108px',
+      lineHeight: 1.35,
+    },
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
+    '@media (max-width: 720px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+  sectionBlock: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
+  sectionHeaderLine: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, justifyContent: 'space-between' },
+  progressTrack: { height: '3px', backgroundColor: tokens.colorNeutralStroke2, flex: 1, minWidth: '140px' },
+  progressFill: { height: '100%', backgroundColor: tokens.colorBrandBackground },
+  checklistList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
+  checklistRow: { display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr)', gap: tokens.spacingHorizontalS, alignItems: 'start' },
+  checklistTextDone: { color: tokens.colorNeutralForeground3, textDecoration: 'line-through' },
+  subtleText: { color: tokens.colorNeutralForeground3 },
+  dependencyCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  attachmentCard: {
+    display: 'grid',
+    gridTemplateColumns: '32px minmax(0, 1fr)',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'center',
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  attachmentIcon: {
+    width: '28px',
+    height: '28px',
+    borderRadius: tokens.borderRadiusSmall,
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  conversationBox: {
+    padding: tokens.spacingVerticalL,
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    textAlign: 'center',
+    color: tokens.colorNeutralForeground3,
+  },
+  changesRail: {
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalM}`,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalM,
+    minHeight: '100%',
+    overflow: 'hidden',
+    '@media (max-width: 1100px)': {
+      minHeight: 'auto',
+    },
+  },
+  changesHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  changeList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, overflowY: 'auto', maxHeight: 'calc(100vh - 260px)', paddingRight: tokens.spacingHorizontalXS },
+  changeCard: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    padding: tokens.spacingVerticalM,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  changeMeta: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, justifyContent: 'space-between' },
   statusBar: {
     display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM,
     backgroundColor: tokens.colorNeutralBackground1,
@@ -63,13 +216,11 @@ const useStyles = makeStyles({
   lastUpdated: { marginLeft: 'auto', fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3 },
   tabContent: {
     backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: tokens.spacingVerticalL,
     display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL,
   },
-  fieldGroup: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
-  inlineEditWrap: { position: 'relative' },
+  fieldGroup: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS, width: '100%' },
+  inlineEditWrap: { position: 'relative', width: '100%' },
+  wideControl: { width: '100%' },
   successBorder: { outline: `2px solid ${tokens.colorStatusSuccessBorderActive}`, borderRadius: tokens.borderRadiusSmall },
   sidebarCard: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -85,7 +236,7 @@ const useStyles = makeStyles({
   },
   codeText: { fontFamily: 'monospace', fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold },
   idText: { fontFamily: 'monospace', fontSize: tokens.fontSizeBase100, color: tokens.colorNeutralForeground4, wordBreak: 'break-all' },
-  datesGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: tokens.spacingHorizontalM },
+  datesGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(240px, 1fr))', gap: tokens.spacingHorizontalM },
   activityList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   activityRow: {
     display: 'flex',
@@ -140,8 +291,8 @@ const useStyles = makeStyles({
   raidTitle: { flex: 1, fontWeight: tokens.fontWeightSemibold, fontSize: tokens.fontSizeBase300, color: tokens.colorNeutralForeground1 },
   raidEmpty: { color: tokens.colorNeutralForeground3, fontStyle: 'italic', padding: tokens.spacingVerticalM },
   teamSection: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
-  teamRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS },
-  teamName: { flex: 1, fontSize: tokens.fontSizeBase200 },
+  teamRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, minWidth: 0 },
+  teamName: { flex: 1, minWidth: 0, fontSize: tokens.fontSizeBase200, overflowWrap: 'anywhere' },
 })
 
 const STATUS_OPTIONS: { value: DeliverableStatus; label: string }[] = [
@@ -178,7 +329,7 @@ const RAID_STATUS_LABELS: Record<RAIDStatus, string> = {
   open: 'Open', in_progress: 'In Progress', closed: 'Closed',
 }
 
-type EditableFieldName = 'description' | 'notes' | 'startDate' | 'targetDate'
+type EditableFieldName = 'name' | 'description' | 'notes' | 'startDate' | 'targetDate'
 interface UseInlineEditProps { id: string; field: EditableFieldName; initialValue: string }
 
 function useInlineEdit({ id, field, initialValue }: UseInlineEditProps) {
@@ -269,7 +420,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
   function saveName() {
     if (!nameValue.trim() || nameValue === deliverable.name) return
     startNameTransition(async () => {
-      await updateDeliverableField(deliverable.id, 'description', nameValue.trim())
+      await updateDeliverableField(deliverable.id, 'name', nameValue.trim())
       setNameSuccess(true); router.refresh(); setTimeout(() => setNameSuccess(false), 1500)
     })
   }
@@ -305,6 +456,25 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
   const linkedVendorIds = new Set(deliverable.vendorLinks.map((l) => l.vendorId))
   const availablePeople = orgPeople.filter((p) => !linkedPersonIds.has(p.id))
   const availableVendors = orgVendors.filter((v) => !linkedVendorIds.has(v.id))
+  const [detailCriteria, setDetailCriteria] = useState(criteria)
+  const [criteriaPending, startCriteriaTransition] = useTransition()
+  const completedCriteria = detailCriteria.filter((c) => c.completion?.completed).length
+  const criteriaPct = detailCriteria.length === 0 ? 0 : Math.round((completedCriteria / detailCriteria.length) * 100)
+  const recentEvidence = evidenceItems.slice(0, 3)
+
+  function handleCriteriaToggle(criteriaId: string, completed: boolean) {
+    startCriteriaTransition(async () => {
+      await toggleCriteriaCompletion(deliverable.id, criteriaId, completed)
+      setDetailCriteria((prev) =>
+        prev.map((c) =>
+          c.id === criteriaId
+            ? { ...c, completion: completed ? { completed: true, completedAt: new Date(), completedBy: 'You' } : null }
+            : c
+        )
+      )
+      router.refresh()
+    })
+  }
 
   const [activityQuery, setActivityQuery] = useState('')
   const [activityType, setActivityType] = useState('all')
@@ -358,26 +528,48 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
 
   return (
     <div className={styles.layout}>
-      <div className={styles.leftPanel}>
-        <div className={styles.statusBar}>
-          <Text className={styles.statusLabel}>Status:</Text>
-          {statusPending ? <Spinner size="tiny" /> : (
-            <Select value={currentStatus} onChange={(_, d) => handleStatusChange(d.value as DeliverableStatus)}>
-              {STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </Select>
-          )}
-          <Text className={styles.lastUpdated}>
-            Last updated:{' '}
-            {new Date(deliverable.updatedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-          </Text>
+      <main className={styles.taskSurface}>
+        <div className={styles.taskHeader}>
+          <Text className={styles.taskKicker}>{deliverable.subSectionExecution.focusAreaExecution.name}</Text>
+          <div className={styles.titleRow}>
+            <span className={`${styles.statusDot} ${currentStatus === 'closed' ? styles.statusDotClosed : ''}`} />
+            <Input
+              value={nameValue}
+              onChange={(_, d) => setNameValue(d.value)}
+              onBlur={saveName}
+              contentAfter={namePending ? <Spinner size="tiny" /> : undefined}
+              className={`${styles.titleInput} ${nameSuccess ? styles.successBorder : ''}`}
+            />
+          </div>
+          <div className={styles.headerMeta}>
+            <Badge appearance="tint" color={STATUS_BADGE_COLORS[currentStatus]}>
+              {STATUS_OPTIONS.find((o) => o.value === currentStatus)?.label ?? currentStatus}
+            </Badge>
+            {deliverable.phase && (
+              <Badge appearance="tint" color={PHASE_COLORS[deliverable.phase]}>
+                {PHASE_LABELS[deliverable.phase]}
+              </Badge>
+            )}
+            <Badge appearance="outline">{deliverable.code}</Badge>
+            {deliverable.owner && (
+              <div className={styles.compactAvatarRow}>
+                <Avatar name={deliverable.owner.name} size={24} />
+                <Text size={200}>{deliverable.owner.name}</Text>
+              </div>
+            )}
+            {deliverable.peopleLinks.slice(0, 3).map((link) => (
+              <Avatar key={link.personId} name={link.person.name} size={24} />
+            ))}
+          </div>
         </div>
+
         <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'evidence' | 'notes' | 'activity' | 'raid')}>
           <Tab value="details">Details</Tab>
           <Tab value="evidence">
             Evidence
-            {(criteria.length > 0 || evidenceRequirements.length > 0) && (
+            {(detailCriteria.length > 0 || evidenceRequirements.length > 0) && (
               <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>
-                {criteria.filter((c) => c.completion?.completed).length}/{criteria.length}
+                {completedCriteria}/{detailCriteria.length}
               </Badge>
             )}
           </Tab>
@@ -387,60 +579,239 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
           </Tab>
           <Tab value="activity">
             Activity
-            {auditEvents.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{auditEvents.length}</Badge>}
+            {activityItems.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{activityItems.length}</Badge>}
           </Tab>
           <Tab value="raid">
             RAID
             {linkedRAID.length > 0 && <Badge appearance="filled" color="brand" size="small" style={{ marginLeft: '6px' }}>{linkedRAID.length}</Badge>}
           </Tab>
         </TabList>
+
         {activeTab === 'details' && (
-          <div className={styles.tabContent}>
-            <div className={styles.fieldGroup}>
-              <Field label="Name">
-                <div className={styles.inlineEditWrap}>
-                  <Input value={nameValue} onChange={(_, d) => setNameValue(d.value)} onBlur={saveName}
-                    contentAfter={namePending ? <Spinner size="tiny" /> : undefined}
-                    className={nameSuccess ? styles.successBorder : undefined} />
-                </div>
-              </Field>
-            </div>
-            <div className={styles.fieldGroup}>
+          <div className={styles.plannerGrid}>
+            <div className={styles.detailsColumn}>
               <Field label="Description">
                 <div className={styles.inlineEditWrap}>
-                  <Textarea value={desc.value} onChange={(_, d) => desc.setValue(d.value)} onBlur={(e) => desc.save(e.target.value)}
-                    placeholder="Add a description..." rows={4} className={desc.showSuccess ? styles.successBorder : undefined} />
+                  <Textarea
+                    value={desc.value}
+                    onChange={(_, d) => desc.setValue(d.value)}
+                    onBlur={(e) => desc.save(e.target.value)}
+                    placeholder="Add a description..."
+                    rows={5}
+                    className={`${styles.descriptionBox} ${desc.showSuccess ? styles.successBorder : ''}`}
+                  />
                   {desc.isPending && <Spinner size="tiny" style={{ position: 'absolute', top: 8, right: 8 }} />}
                 </div>
               </Field>
-            </div>
-            <div className={styles.fieldGroup}>
-              <Field label="Internal Notes">
-                <div className={styles.inlineEditWrap}>
-                  <Textarea value={notes.value} onChange={(_, d) => notes.setValue(d.value)} onBlur={(e) => notes.save(e.target.value)}
-                    placeholder="Internal notes..." rows={4} className={notes.showSuccess ? styles.successBorder : undefined} />
-                  {notes.isPending && <Spinner size="tiny" style={{ position: 'absolute', top: 8, right: 8 }} />}
-                </div>
-              </Field>
-            </div>
-            <Divider />
-            <div>
-              <Text size={300} weight="semibold" block style={{ marginBottom: tokens.spacingVerticalS }}>Dates</Text>
-              <div className={styles.datesGrid}>
+
+              <div className={styles.formGrid}>
+                <Field label="Status">
+                  {statusPending ? <Spinner size="tiny" /> : (
+                    <Select value={currentStatus} onChange={(_, d) => handleStatusChange(d.value as DeliverableStatus)}>
+                      {STATUS_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </Select>
+                  )}
+                </Field>
+                <Field label="Owner">
+                  {ownerPending ? <Spinner size="tiny" /> : deliverable.owner ? (
+                    <div className={styles.teamRow}>
+                      <Avatar name={deliverable.owner.name} size={24} />
+                      <Text className={styles.teamName}>{deliverable.owner.name}</Text>
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        icon={<DismissCircleRegular />}
+                        aria-label="Remove owner"
+                        onClick={() => handleOwnerChange(null)}
+                      />
+                    </div>
+                  ) : (
+                    <Combobox placeholder="Set owner..." onOptionSelect={(_, d) => { if (d.optionValue) handleOwnerChange(d.optionValue) }}>
+                      {orgPeople.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
+                    </Combobox>
+                  )}
+                </Field>
                 <Field label="Start Date">
-                  <Input type="date" value={startDateEdit.value} onChange={(_, d) => startDateEdit.setValue(d.value)}
+                  <Input
+                    type="date"
+                    value={startDateEdit.value}
+                    onChange={(_, d) => startDateEdit.setValue(d.value)}
                     onBlur={(e) => startDateEdit.save(e.target.value)}
                     contentAfter={startDateEdit.isPending ? <Spinner size="tiny" /> : undefined}
-                    className={startDateEdit.showSuccess ? styles.successBorder : undefined} />
+                    className={`${styles.wideControl} ${startDateEdit.showSuccess ? styles.successBorder : ''}`}
+                  />
                 </Field>
                 <Field label="Target Date">
-                  <Input type="date" value={targetDateEdit.value} onChange={(_, d) => targetDateEdit.setValue(d.value)}
+                  <Input
+                    type="date"
+                    value={targetDateEdit.value}
+                    onChange={(_, d) => targetDateEdit.setValue(d.value)}
                     onBlur={(e) => targetDateEdit.save(e.target.value)}
                     contentAfter={targetDateEdit.isPending ? <Spinner size="tiny" /> : undefined}
-                    className={targetDateEdit.showSuccess ? styles.successBorder : undefined} />
+                    className={`${styles.wideControl} ${targetDateEdit.showSuccess ? styles.successBorder : ''}`}
+                  />
+                </Field>
+                <Field label="Domain">
+                  <Input value={deliverable.domain ?? ''} readOnly className={styles.wideControl} />
+                </Field>
+                <Field label="Phase">
+                  <Input value={deliverable.phase ? PHASE_LABELS[deliverable.phase] : ''} readOnly className={styles.wideControl} />
                 </Field>
               </div>
+
+              <section className={styles.sectionBlock}>
+                <div className={styles.sectionHeaderLine}>
+                  <Text size={300} weight="semibold">Checklist</Text>
+                  <div className={styles.progressTrack} aria-hidden="true">
+                    <div className={styles.progressFill} style={{ width: `${criteriaPct}%` }} />
+                  </div>
+                  <Text size={200} className={styles.subtleText}>{completedCriteria}/{detailCriteria.length}</Text>
+                </div>
+                {detailCriteria.length === 0 ? (
+                  <Text className={styles.subtleText}>No acceptance criteria configured.</Text>
+                ) : (
+                  <div className={styles.checklistList}>
+                    {detailCriteria.map((item) => (
+                      <div key={item.id} className={styles.checklistRow}>
+                        <Checkbox
+                          checked={Boolean(item.completion?.completed)}
+                          disabled={criteriaPending}
+                          onChange={(_, data) => handleCriteriaToggle(item.id, Boolean(data.checked))}
+                          aria-label={`Mark ${item.description} as complete`}
+                        />
+                        <div>
+                          <Text className={item.completion?.completed ? styles.checklistTextDone : undefined}>
+                            {item.description}
+                          </Text>
+                          {item.verificationMethod && (
+                            <Text block size={200} className={styles.subtleText}>{item.verificationMethod}</Text>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className={styles.sectionBlock}>
+                <div className={styles.sectionHeaderLine}>
+                  <Text size={300} weight="semibold">Conversation</Text>
+                  <Badge appearance="tint" color="informative">{deliverableNotes.length} notes</Badge>
+                </div>
+                <div className={styles.inlineEditWrap}>
+                  <Textarea
+                    value={notes.value}
+                    onChange={(_, d) => notes.setValue(d.value)}
+                    onBlur={(e) => notes.save(e.target.value)}
+                    placeholder="Add internal notes..."
+                    rows={4}
+                    className={`${styles.wideControl} ${notes.showSuccess ? styles.successBorder : ''}`}
+                  />
+                  {notes.isPending && <Spinner size="tiny" style={{ position: 'absolute', top: 8, right: 8 }} />}
+                </div>
+              </section>
             </div>
+
+            <aside className={styles.sideColumn}>
+              <section className={styles.sectionBlock}>
+                <div className={styles.sectionHeaderLine}>
+                  <Text size={300} weight="semibold">RAID Links</Text>
+                  <LinkRAIDDialog deliverableId={deliverable.id} projectRAID={projectRAID} linkedIds={new Set(linkedRAID.map((l) => l.raidItem.id))} />
+                </div>
+                {linkedRAID.length === 0 ? (
+                  <Text className={styles.subtleText}>No linked risks, assumptions, issues, or dependencies.</Text>
+                ) : (
+                  linkedRAID.slice(0, 4).map((link) => {
+                    const item = link.raidItem
+                    return (
+                      <div key={item.id} className={styles.dependencyCard}>
+                        <div className={styles.sectionHeaderLine}>
+                          <Badge appearance="tint" color={RAID_TYPE_COLORS[item.type]} size="small">{RAID_TYPE_LABELS[item.type]}</Badge>
+                          <Badge appearance="tint" color={RAID_STATUS_COLORS[item.status]} size="small">{RAID_STATUS_LABELS[item.status]}</Badge>
+                        </div>
+                        <Text size={200} weight="semibold">{item.title}</Text>
+                        <div className={styles.sectionHeaderLine}>
+                          <Badge appearance="tint" color={RAID_SEVERITY_COLORS[item.severity]} size="small">{RAID_SEVERITY_LABELS[item.severity]}</Badge>
+                          <UnlinkButton raidItemId={item.id} deliverableId={deliverable.id} />
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </section>
+
+              <section className={styles.sectionBlock}>
+                <div className={styles.sectionHeaderLine}>
+                  <Text size={300} weight="semibold">Attachments</Text>
+                  <Button size="small" appearance="subtle" onClick={() => setActiveTab('evidence')}>Manage</Button>
+                </div>
+                {recentEvidence.length === 0 ? (
+                  <Text className={styles.subtleText}>No evidence attached yet.</Text>
+                ) : (
+                  recentEvidence.map((item) => (
+                    <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className={styles.attachmentCard}>
+                      <span className={styles.attachmentIcon}>{item.type.slice(0, 1).toUpperCase()}</span>
+                      <span>
+                        <Text block size={200} weight="semibold">{item.name}</Text>
+                        <Text block size={100} className={styles.subtleText}>
+                          {item.uploadedBy} · {new Date(item.uploadedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </span>
+                    </a>
+                  ))
+                )}
+              </section>
+
+              <section className={styles.sectionBlock}>
+                <Text size={300} weight="semibold">People</Text>
+                <div className={styles.teamSection}>
+                  {deliverable.peopleLinks.map((link) => (
+                    <div key={link.personId} className={styles.teamRow}>
+                      <Avatar name={link.person.name} size={24} />
+                      <Text className={styles.teamName}>{link.person.name}</Text>
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        icon={<DismissCircleRegular />}
+                        aria-label={`Remove ${link.person.name}`}
+                        disabled={linkPersonPending}
+                        onClick={() => handleUnlinkPerson(link.personId)}
+                      />
+                    </div>
+                  ))}
+                  {availablePeople.length > 0 && (
+                    <Combobox placeholder="Add person..." onOptionSelect={(_, d) => { if (d.optionValue) handleLinkPerson(d.optionValue) }}>
+                      {availablePeople.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
+                    </Combobox>
+                  )}
+                </div>
+              </section>
+
+              <section className={styles.sectionBlock}>
+                <Text size={300} weight="semibold">Vendors</Text>
+                <div className={styles.teamSection}>
+                  {deliverable.vendorLinks.map((link) => (
+                    <div key={link.vendorId} className={styles.teamRow}>
+                      <Avatar name={link.vendor.name} size={24} shape="square" />
+                      <Text className={styles.teamName}>{link.vendor.name}</Text>
+                      <Button
+                        size="small"
+                        appearance="subtle"
+                        icon={<DismissCircleRegular />}
+                        aria-label={`Remove ${link.vendor.name}`}
+                        disabled={linkVendorPending}
+                        onClick={() => handleUnlinkVendor(link.vendorId)}
+                      />
+                    </div>
+                  ))}
+                  {availableVendors.length > 0 && (
+                    <Combobox placeholder="Add vendor..." onOptionSelect={(_, d) => { if (d.optionValue) handleLinkVendor(d.optionValue) }}>
+                      {availableVendors.map((v) => <Option key={v.id} value={v.id}>{v.name}</Option>)}
+                    </Combobox>
+                  )}
+                </div>
+              </section>
+            </aside>
           </div>
         )}
         {activeTab === 'evidence' && (
@@ -449,7 +820,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
               deliverableId={deliverable.id}
               evidenceRequirements={evidenceRequirements}
               evidenceItems={evidenceItems}
-              criteria={criteria}
+              criteria={detailCriteria}
             />
           </div>
         )}
@@ -575,106 +946,63 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
             )}
           </div>
         )}
-      </div>
-      <div className={styles.rightPanel}>
-        <div className={styles.sidebarCard}>
-          <Text size={300} weight="semibold" block>Details</Text>
-          <Divider />
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Status</Text>
-            <Badge appearance="tint" color={STATUS_BADGE_COLORS[currentStatus]}>
-              {STATUS_OPTIONS.find((o) => o.value === currentStatus)?.label ?? currentStatus}
-            </Badge>
-          </div>
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Phase</Text>
-            {deliverable.phase ? (
-              <Badge appearance="tint" color={PHASE_COLORS[deliverable.phase]}>{PHASE_LABELS[deliverable.phase]}</Badge>
-            ) : (
-              <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
-            )}
-          </div>
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Code</Text>
-            <span className={styles.codeText}>{deliverable.code}</span>
-          </div>
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Domain</Text>
-            <Text size={300}>{deliverable.domain ?? <span style={{ color: tokens.colorNeutralForeground3 }}>—</span>}</Text>
-          </div>
-          <Divider />
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Deliverable ID</Text>
-            <span className={styles.idText}>{deliverable.id}</span>
-          </div>
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Created</Text>
-            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-              {new Date(deliverable.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </Text>
-          </div>
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Last Updated</Text>
-            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-              {new Date(deliverable.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </Text>
-          </div>
+      </main>
+
+      <aside className={styles.changesRail}>
+        <div className={styles.changesHeader}>
+          <Text size={300} weight="semibold">Changes</Text>
+          {activityPending && <Spinner size="tiny" />}
         </div>
-        <div className={styles.sidebarCard}>
-          <Text size={300} weight="semibold" block>Team &amp; Stakeholders</Text>
-          <Divider />
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Owner</Text>
-            {ownerPending ? <Spinner size="tiny" /> : deliverable.owner ? (
-              <div className={styles.teamRow}>
-                <Avatar name={deliverable.owner.name} size={24} />
-                <Text className={styles.teamName}>{deliverable.owner.name}</Text>
-                <Button size="small" appearance="subtle" onClick={() => handleOwnerChange(null)}>x</Button>
+        {activityError && (
+          <div className={styles.activityError}>
+            <Text size={200}>{activityError}</Text>
+            <Button
+              size="small"
+              appearance="subtle"
+              onClick={() => {
+                startActivityTransition(async () => {
+                  await refreshActivity(true)
+                })
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        <div className={styles.changeList}>
+          {activityItems.slice(0, 10).length === 0 && !activityPending ? (
+            <Text className={styles.activityPlaceholder}>No changes yet.</Text>
+          ) : (
+            activityItems.slice(0, 10).map((event) => (
+              <div key={event.id} className={styles.changeCard}>
+                <div className={styles.changeMeta}>
+                  <div className={styles.compactAvatarRow}>
+                    <Avatar name={event.actorName} size={24} />
+                    <Text size={200}>{event.actorName}</Text>
+                  </div>
+                  <Text size={100} className={styles.subtleText}>
+                    {new Date(event.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                  </Text>
+                </div>
+                <Text size={200} weight="semibold">{event.description}</Text>
+                <Text size={100} className={styles.subtleText}>{event.eventType}</Text>
               </div>
-            ) : (
-              <Combobox placeholder="Set owner..." onOptionSelect={(_, d) => { if (d.optionValue) handleOwnerChange(d.optionValue) }}>
-                {orgPeople.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
-              </Combobox>
-            )}
-          </div>
-          <Divider />
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>People</Text>
-            <div className={styles.teamSection}>
-              {deliverable.peopleLinks.map((link) => (
-                <div key={link.personId} className={styles.teamRow}>
-                  <Avatar name={link.person.name} size={24} />
-                  <Text className={styles.teamName}>{link.person.name}</Text>
-                  <Button size="small" appearance="subtle" disabled={linkPersonPending} onClick={() => handleUnlinkPerson(link.personId)}>x</Button>
-                </div>
-              ))}
-              {availablePeople.length > 0 && (
-                <Combobox placeholder="Add person..." onOptionSelect={(_, d) => { if (d.optionValue) handleLinkPerson(d.optionValue) }}>
-                  {availablePeople.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
-                </Combobox>
-              )}
-            </div>
-          </div>
-          <Divider />
-          <div className={styles.sidebarRow}>
-            <Text className={styles.sidebarLabel}>Vendors</Text>
-            <div className={styles.teamSection}>
-              {deliverable.vendorLinks.map((link) => (
-                <div key={link.vendorId} className={styles.teamRow}>
-                  <Avatar name={link.vendor.name} size={24} shape="square" />
-                  <Text className={styles.teamName}>{link.vendor.name}</Text>
-                  <Button size="small" appearance="subtle" disabled={linkVendorPending} onClick={() => handleUnlinkVendor(link.vendorId)}>x</Button>
-                </div>
-              ))}
-              {availableVendors.length > 0 && (
-                <Combobox placeholder="Add vendor..." onOptionSelect={(_, d) => { if (d.optionValue) handleLinkVendor(d.optionValue) }}>
-                  {availableVendors.map((v) => <Option key={v.id} value={v.id}>{v.name}</Option>)}
-                </Combobox>
-              )}
-            </div>
-          </div>
+            ))
+          )}
+          {activityHasMore && !activityPending && (
+            <Button
+              appearance="subtle"
+              onClick={() => {
+                startActivityTransition(async () => {
+                  await refreshActivity(false)
+                })
+              }}
+            >
+              Load more
+            </Button>
+          )}
         </div>
-      </div>
+      </aside>
     </div>
   )
 }

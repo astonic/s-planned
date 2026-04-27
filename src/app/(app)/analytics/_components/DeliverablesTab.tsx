@@ -139,16 +139,13 @@ export function DeliverablesTab({ byStatus, byFocusArea, trend, totalOverdue, to
                 outerRadius={90}
                 paddingAngle={2}
                 dataKey="value"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 labelLine={false}
               >
                 {pieData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
-              </Pie>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+              </Pie>              <Tooltip formatter={(v: any, name: any) => [v, name] as [any, any]} contentStyle={{ fontSize: 12, borderRadius: 6 }} />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>

@@ -1,6 +1,7 @@
 import type { Session } from 'next-auth'
 import { SidebarProvider } from './SidebarContext'
 import { Sidebar } from './Sidebar'
+import { BottomNav } from './BottomNav'
 
 interface AppShellProps {
   session: Session
@@ -13,7 +14,7 @@ interface AppShellProps {
 export function AppShell({ session, orgName, orgSlug, orgLogoUrl, children }: AppShellProps) {
   return (
     <SidebarProvider>
-      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <div className="sp-app-shell">
         <Sidebar
           userName={session.user.name}
           orgName={orgName}
@@ -21,9 +22,10 @@ export function AppShell({ session, orgName, orgSlug, orgLogoUrl, children }: Ap
           orgLogoUrl={orgLogoUrl}
           avatarUrl={session.user.avatarUrl}
         />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="sp-app-content">
           {children}
         </div>
+        <BottomNav />
       </div>
     </SidebarProvider>
   )

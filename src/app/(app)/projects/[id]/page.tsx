@@ -6,7 +6,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectTabs } from './_components/ProjectTabs'
 import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
-import type { ProjectPhase } from '@prisma/client'
+import type { ProjectPhase, RAIDSeverity } from '@prisma/client'
+import type { RAIDItemWithCount } from './raid/_components/RAIDLogView'
 
 interface Props {
   params: { id: string }
@@ -29,7 +30,10 @@ export default async function ProjectDetailPage({ params }: Props) {
             orderBy: { order: 'asc' },
             include: {
               deliverables: {
-                select: { status: true, phase: true, targetDate: true },
+                orderBy: { code: 'asc' },
+                include: {
+                  owner: true,
+                },
               },
             },
           },
@@ -80,9 +84,24 @@ export default async function ProjectDetailPage({ params }: Props) {
   }
 
   // ── RAID summary ─────────────────────────────────────────────────────────────
-  const raidItems = await prisma.rAIDItem.findMany({
-    where: { projectId: params.id },
-    select: { type: true, status: true, severity: true },
+  const rawRaidItems = await prisma.rAIDItem.findMany({
+    where: { projectId: params.id, organizationId },
+    orderBy: [{ createdAt: 'desc' }],
+    include: {
+      _count: { select: { deliverables: true } },
+    },
+  })
+
+  const SEVERITY_ORDER: Record<RAIDSeverity, number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+  }
+  const raidItems: RAIDItemWithCount[] = [...rawRaidItems].sort((a, b) => {
+    const severityDiff = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]
+    if (severityDiff !== 0) return severityDiff
+    return b.createdAt.getTime() - a.createdAt.getTime()
   })
 
   const raidSummary: RAIDSummary = {
@@ -95,6 +114,16 @@ export default async function ProjectDetailPage({ params }: Props) {
       issue: raidItems.filter((r) => r.type === 'issue').length,
       dependency: raidItems.filter((r) => r.type === 'dependency').length,
     },
+  }
+  const raidStats = {
+    total: raidItems.length,
+    byType: raidSummary.byType,
+    bySeverity: {
+      critical: raidItems.filter((i) => i.severity === 'critical').length,
+      high: raidItems.filter((i) => i.severity === 'high').length,
+    },
+    openCount: raidItems.filter((i) => i.status === 'open' || i.status === 'in_progress').length,
+    closedCount: raidItems.filter((i) => i.status === 'closed').length,
   }
 
   const [recentActivityRows, recentActivityTypes, decisionRows] = await Promise.all([
@@ -136,6 +165,8 @@ export default async function ProjectDetailPage({ params }: Props) {
       <ProjectTabs
         projectId={params.id}
         decisions={decisionRows}
+        deliverablesProject={project}
+        raid={{ items: raidItems, stats: raidStats }}
         overview={{
           projectId: params.id,
           projectName: project.name,

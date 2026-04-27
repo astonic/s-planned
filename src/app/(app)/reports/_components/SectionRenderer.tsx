@@ -1,6 +1,20 @@
 'use client'
 
-import { makeStyles, tokens, Text, Badge, Divider } from '@fluentui/react-components'
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Badge,
+  Divider,
+  DataGrid,
+  DataGridHeader,
+  DataGridHeaderCell,
+  DataGridBody,
+  DataGridRow,
+  DataGridCell,
+  createTableColumn,
+  type TableColumnDefinition,
+} from '@fluentui/react-components'
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -34,10 +48,15 @@ const useStyles = makeStyles({
     verticalAlign: 'top' as const,
   },
   progressBar: {
-    height: '8px', borderRadius: '4px',
-    backgroundColor: tokens.colorNeutralBackground3, overflow: 'hidden',
+    height: '8px', borderRadius: 'var(--sp-radius-pill)',
+    backgroundColor: 'var(--sp-gray-100)', overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: '4px', backgroundColor: tokens.colorBrandBackground },
+  progressFill: {
+    height: '100%',
+    borderRadius: 'var(--sp-radius-pill)',
+    background: 'var(--sp-grad-primary)',
+    boxShadow: 'var(--sp-glow-blue)',
+  },
   faBlock: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
@@ -70,6 +89,27 @@ function fmtDate(d: unknown) {
 }
 function fmtPct(n: number) { return `${n}%` }
 
+function ReportDataGrid<T>({ items, columns }: { items: T[]; columns: TableColumnDefinition<T>[] }) {
+  return (
+    <DataGrid items={items} columns={columns} sortable size="small">
+      <DataGridHeader>
+        <DataGridRow>
+          {({ renderHeaderCell }) => (
+            <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
+          )}
+        </DataGridRow>
+      </DataGridHeader>
+      <DataGridBody<T>>
+        {({ item, rowId }) => (
+          <DataGridRow key={rowId}>
+            {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
+          </DataGridRow>
+        )}
+      </DataGridBody>
+    </DataGrid>
+  )
+}
+
 // ── Section renderers ─────────────────────────────────────────────────────────
 
 export function SectionRenderer({ type, content }: { type: string; content: unknown }) {
@@ -82,10 +122,10 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
       <div className={styles.root}>
         <div className={styles.kpiRow}>
           {([
-            { label: 'Readiness', value: `${readinessPct}%`, color: readinessPct >= 80 ? '#107C10' : readinessPct >= 50 ? '#FF8C00' : '#C50F1F' },
+            { label: 'Readiness', value: `${readinessPct}%`, color: readinessPct >= 80 ? 'var(--sp-success)' : readinessPct >= 50 ? 'var(--sp-warning)' : 'var(--sp-danger)' },
             { label: 'Total Deliverables', value: String(data.totalDeliverables ?? 0) },
-            { label: 'Closed', value: String(data.closedDeliverables ?? 0), color: '#107C10' },
-            { label: 'Open Risks', value: String(data.openRisks ?? 0), color: (data.openRisks as number) > 0 ? '#C50F1F' : undefined },
+            { label: 'Closed', value: String(data.closedDeliverables ?? 0), color: 'var(--sp-success)' },
+            { label: 'Open Risks', value: String(data.openRisks ?? 0), color: (data.openRisks as number) > 0 ? 'var(--sp-danger)' : undefined },
           ] as { label: string; value: string; color?: string }[]).map(({ label, value, color }) => (
             <div key={label} className={styles.kpiCard}>
               <Text style={{ fontSize: tokens.fontSizeBase600, fontWeight: tokens.fontWeightSemibold, lineHeight: 1, color }}>{value}</Text>
@@ -129,69 +169,89 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
 
   if (type === 'key_risks' || type === 'raid_detail') {
     const items = (data.items as Array<Record<string, unknown>>) ?? []
+    const columns: TableColumnDefinition<Record<string, unknown>>[] = [
+      createTableColumn({
+        columnId: 'type',
+        compare: (a, b) => String(a.type ?? '').localeCompare(String(b.type ?? '')),
+        renderHeaderCell: () => 'Type',
+        renderCell: (r) => <Text size={200}>{String(r.type ?? '').toUpperCase().slice(0, 4)}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'title',
+        compare: (a, b) => String(a.title ?? '').localeCompare(String(b.title ?? '')),
+        renderHeaderCell: () => 'Title',
+        renderCell: (r) => <Text size={200}>{String(r.title ?? '')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'severity',
+        compare: (a, b) => String(a.severity ?? '').localeCompare(String(b.severity ?? '')),
+        renderHeaderCell: () => 'Severity',
+        renderCell: (r) => <Badge appearance="tint" color={RAID_SEV_COLORS[String(r.severity)] ?? 'informative'} size="small">{String(r.severity ?? '')}</Badge>,
+      }),
+      createTableColumn({
+        columnId: 'status',
+        compare: (a, b) => String(a.status ?? '').localeCompare(String(b.status ?? '')),
+        renderHeaderCell: () => 'Status',
+        renderCell: (r) => <Badge appearance="tint" color={RAID_STATUS_COLORS[String(r.status)] ?? 'informative'} size="small">{String(r.status ?? '').replace('_', ' ')}</Badge>,
+      }),
+      createTableColumn({
+        columnId: 'owner',
+        compare: (a, b) => String(a.owner ?? '').localeCompare(String(b.owner ?? '')),
+        renderHeaderCell: () => 'Owner',
+        renderCell: (r) => <Text size={200}>{String(r.owner ?? '—')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'dueDate',
+        compare: (a, b) => new Date(a.dueDate as string).getTime() - new Date(b.dueDate as string).getTime(),
+        renderHeaderCell: () => 'Due',
+        renderCell: (r) => <Text size={200}>{fmtDate(r.dueDate)}</Text>,
+      }),
+    ]
     return (
       <div>
         {items.length === 0 && <Text size={200} style={{ color: tokens.colorNeutralForeground3, fontStyle: 'italic' }}>No items.</Text>}
-        {items.length > 0 && (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Type</th>
-                <th className={styles.th}>Title</th>
-                <th className={styles.th}>Severity</th>
-                <th className={styles.th}>Status</th>
-                <th className={styles.th}>Owner</th>
-                <th className={styles.th}>Due</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((r, i) => (
-                <tr key={i}>
-                  <td className={styles.td}><Text size={200}>{String(r.type ?? '').toUpperCase().slice(0, 4)}</Text></td>
-                  <td className={styles.td}><Text size={200}>{String(r.title ?? '')}</Text></td>
-                  <td className={styles.td}><Badge appearance="tint" color={RAID_SEV_COLORS[String(r.severity)] ?? 'informative'} size="small">{String(r.severity ?? '')}</Badge></td>
-                  <td className={styles.td}><Badge appearance="tint" color={RAID_STATUS_COLORS[String(r.status)] ?? 'informative'} size="small">{String(r.status ?? '').replace('_', ' ')}</Badge></td>
-                  <td className={styles.td}><Text size={200}>{String(r.owner ?? '—')}</Text></td>
-                  <td className={styles.td}><Text size={200}>{fmtDate(r.dueDate)}</Text></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {items.length > 0 && <ReportDataGrid items={items} columns={columns} />}
       </div>
     )
   }
 
   if (type === 'decisions' || type === 'decisions_detail') {
     const decisions = (data.decisions as Array<Record<string, unknown>>) ?? []
+    const columns: TableColumnDefinition<Record<string, unknown>>[] = [
+      createTableColumn({
+        columnId: 'description',
+        compare: (a, b) => String(a.description ?? '').localeCompare(String(b.description ?? '')),
+        renderHeaderCell: () => 'Decision',
+        renderCell: (d) => (
+          <div>
+            <Text size={200} weight="semibold" block>{String(d.description ?? '')}</Text>
+            {!!d.impact && <Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Impact: {String(d.impact)}</Text>}
+          </div>
+        ),
+      }),
+      createTableColumn({
+        columnId: 'status',
+        compare: (a, b) => String(a.status ?? '').localeCompare(String(b.status ?? '')),
+        renderHeaderCell: () => 'Status',
+        renderCell: (d) => <Badge appearance="tint" color={DECISION_STATUS_COLORS[String(d.status)] ?? 'informative'} size="small">{String(d.status ?? '')}</Badge>,
+      }),
+      createTableColumn({
+        columnId: 'loggedDate',
+        compare: (a, b) => new Date(a.loggedDate as string).getTime() - new Date(b.loggedDate as string).getTime(),
+        renderHeaderCell: () => 'Date',
+        renderCell: (d) => <Text size={200}>{fmtDate(d.loggedDate)}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'loggedBy',
+        compare: (a, b) => String(a.loggedBy ?? '').localeCompare(String(b.loggedBy ?? '')),
+        renderHeaderCell: () => 'Logged By',
+        renderCell: (d) => <Text size={200}>{String(d.loggedBy ?? '—')}</Text>,
+      }),
+    ]
     return (
       <div>
         {decisions.length === 0 && <Text size={200} style={{ color: tokens.colorNeutralForeground3, fontStyle: 'italic' }}>No decisions recorded.</Text>}
-        {decisions.length > 0 && (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Decision</th>
-                <th className={styles.th}>Status</th>
-                <th className={styles.th}>Date</th>
-                <th className={styles.th}>Logged By</th>
-              </tr>
-            </thead>
-            <tbody>
-              {decisions.map((d, i) => (
-                <tr key={i}>
-                  <td className={styles.td}>
-                    <Text size={200} weight="semibold">{String(d.description ?? '')}</Text>
-                    {!!d.impact && <Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Impact: {String(d.impact)}</Text>}
-                  </td>
-                  <td className={styles.td}><Badge appearance="tint" color={DECISION_STATUS_COLORS[String(d.status)] ?? 'informative'} size="small">{String(d.status ?? '')}</Badge></td>
-                  <td className={styles.td}><Text size={200}>{fmtDate(d.loggedDate)}</Text></td>
-                  <td className={styles.td}><Text size={200}>{String(d.loggedBy ?? '—')}</Text></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {decisions.length > 0 && <ReportDataGrid items={decisions} columns={columns} />}
       </div>
     )
   }
@@ -230,33 +290,42 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
 
   if (type === 'evidence_detail') {
     const items = (data.items as Array<Record<string, unknown>>) ?? []
+    const columns: TableColumnDefinition<Record<string, unknown>>[] = [
+      createTableColumn({
+        columnId: 'name',
+        compare: (a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')),
+        renderHeaderCell: () => 'Name',
+        renderCell: (e) => <Text size={200}>{String(e.name ?? '')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'type',
+        compare: (a, b) => String(a.type ?? '').localeCompare(String(b.type ?? '')),
+        renderHeaderCell: () => 'Type',
+        renderCell: (e) => <Badge appearance="outline" size="small">{String(e.type ?? '')}</Badge>,
+      }),
+      createTableColumn({
+        columnId: 'uploadedBy',
+        compare: (a, b) => String(a.uploadedBy ?? '').localeCompare(String(b.uploadedBy ?? '')),
+        renderHeaderCell: () => 'Uploaded By',
+        renderCell: (e) => <Text size={200}>{String(e.uploadedBy ?? '—')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'uploadedAt',
+        compare: (a, b) => new Date(a.uploadedAt as string).getTime() - new Date(b.uploadedAt as string).getTime(),
+        renderHeaderCell: () => 'Date',
+        renderCell: (e) => <Text size={200}>{fmtDate(e.uploadedAt)}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'verified',
+        compare: (a, b) => Number(!!a.verified) - Number(!!b.verified),
+        renderHeaderCell: () => 'Verified',
+        renderCell: (e) => (!!e.verified ? <Badge appearance="tint" color="success" size="small">Yes</Badge> : <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>No</Text>),
+      }),
+    ]
     return (
       <div>
         {items.length === 0 && <Text size={200} style={{ color: tokens.colorNeutralForeground3, fontStyle: 'italic' }}>No evidence items.</Text>}
-        {items.length > 0 && (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Name</th>
-                <th className={styles.th}>Type</th>
-                <th className={styles.th}>Uploaded By</th>
-                <th className={styles.th}>Date</th>
-                <th className={styles.th}>Verified</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e, i) => (
-                <tr key={i}>
-                  <td className={styles.td}><Text size={200}>{String(e.name ?? '')}</Text></td>
-                  <td className={styles.td}><Badge appearance="outline" size="small">{String(e.type ?? '')}</Badge></td>
-                  <td className={styles.td}><Text size={200}>{String(e.uploadedBy ?? '—')}</Text></td>
-                  <td className={styles.td}><Text size={200}>{fmtDate(e.uploadedAt)}</Text></td>
-                  <td className={styles.td}>{!!e.verified ? <Badge appearance="tint" color="success" size="small">Yes</Badge> : <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>No</Text>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        {items.length > 0 && <ReportDataGrid items={items} columns={columns} />}
       </div>
     )
   }
@@ -276,28 +345,41 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
                 <div style={{ padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`, backgroundColor: tokens.colorNeutralBackground1 }}>
                   <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground2 }}>{ss.name}</Text>
                 </div>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th className={styles.th}>Code</th>
-                      <th className={styles.th}>Name</th>
-                      <th className={styles.th}>Phase</th>
-                      <th className={styles.th}>Status</th>
-                      <th className={styles.th}>Target</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ss.deliverables.map((d, i) => (
-                      <tr key={i}>
-                        <td className={styles.td}><Text size={200} style={{ color: tokens.colorNeutralForeground3, fontFamily: 'monospace' }}>{String(d.code ?? '')}</Text></td>
-                        <td className={styles.td}><Text size={200}>{String(d.name ?? '')}</Text></td>
-                        <td className={styles.td}><Text size={200}>{String(d.phase ?? '—').replace('_', ' ')}</Text></td>
-                        <td className={styles.td}><Badge appearance="tint" color={STATUS_COLORS[String(d.status)] ?? 'informative'} size="small">{String(d.status ?? '').replace('_', ' ')}</Badge></td>
-                        <td className={styles.td}><Text size={200}>{fmtDate(d.targetDate)}</Text></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <ReportDataGrid
+                  items={ss.deliverables}
+                  columns={[
+                    createTableColumn<Record<string, unknown>>({
+                      columnId: 'code',
+                      compare: (a, b) => String(a.code ?? '').localeCompare(String(b.code ?? '')),
+                      renderHeaderCell: () => 'Code',
+                      renderCell: (d) => <Text size={200} style={{ color: tokens.colorNeutralForeground3, fontFamily: 'monospace' }}>{String(d.code ?? '')}</Text>,
+                    }),
+                    createTableColumn<Record<string, unknown>>({
+                      columnId: 'name',
+                      compare: (a, b) => String(a.name ?? '').localeCompare(String(b.name ?? '')),
+                      renderHeaderCell: () => 'Name',
+                      renderCell: (d) => <Text size={200}>{String(d.name ?? '')}</Text>,
+                    }),
+                    createTableColumn<Record<string, unknown>>({
+                      columnId: 'phase',
+                      compare: (a, b) => String(a.phase ?? '').localeCompare(String(b.phase ?? '')),
+                      renderHeaderCell: () => 'Phase',
+                      renderCell: (d) => <Text size={200}>{String(d.phase ?? '—').replace('_', ' ')}</Text>,
+                    }),
+                    createTableColumn<Record<string, unknown>>({
+                      columnId: 'status',
+                      compare: (a, b) => String(a.status ?? '').localeCompare(String(b.status ?? '')),
+                      renderHeaderCell: () => 'Status',
+                      renderCell: (d) => <Badge appearance="tint" color={STATUS_COLORS[String(d.status)] ?? 'informative'} size="small">{String(d.status ?? '').replace('_', ' ')}</Badge>,
+                    }),
+                    createTableColumn<Record<string, unknown>>({
+                      columnId: 'targetDate',
+                      compare: (a, b) => new Date(a.targetDate as string).getTime() - new Date(b.targetDate as string).getTime(),
+                      renderHeaderCell: () => 'Target',
+                      renderCell: (d) => <Text size={200}>{fmtDate(d.targetDate)}</Text>,
+                    }),
+                  ]}
+                />
               </div>
             ))}
           </div>
@@ -308,32 +390,39 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
 
   if (type === 'activity_log') {
     const events = (data.events as Array<Record<string, unknown>>) ?? []
+    const columns: TableColumnDefinition<Record<string, unknown>>[] = [
+      createTableColumn({
+        columnId: 'actorName',
+        compare: (a, b) => String(a.actorName ?? '').localeCompare(String(b.actorName ?? '')),
+        renderHeaderCell: () => 'Actor',
+        renderCell: (e) => <Text size={200}>{String(e.actorName ?? '')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'eventType',
+        compare: (a, b) => String(a.eventType ?? '').localeCompare(String(b.eventType ?? '')),
+        renderHeaderCell: () => 'Event',
+        renderCell: (e) => <Badge appearance="outline" size="small">{String(e.eventType ?? '')}</Badge>,
+      }),
+      createTableColumn({
+        columnId: 'description',
+        compare: (a, b) => String(a.description ?? '').localeCompare(String(b.description ?? '')),
+        renderHeaderCell: () => 'Description',
+        renderCell: (e) => <Text size={200}>{String(e.description ?? '')}</Text>,
+      }),
+      createTableColumn({
+        columnId: 'createdAt',
+        compare: (a, b) => new Date(a.createdAt as string).getTime() - new Date(b.createdAt as string).getTime(),
+        renderHeaderCell: () => 'Date',
+        renderCell: (e) => <Text size={200}>{fmtDate(e.createdAt)}</Text>,
+      }),
+    ]
     return (
       <div>
         <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalM }} block>
           Period: {fmtDate(data.periodStart)} — {fmtDate(data.periodEnd)} · {events.length} events
         </Text>
         {events.length === 0 && <Text size={200} style={{ color: tokens.colorNeutralForeground3, fontStyle: 'italic' }}>No activity in period.</Text>}
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={styles.th}>Actor</th>
-              <th className={styles.th}>Event</th>
-              <th className={styles.th}>Description</th>
-              <th className={styles.th}>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((e, i) => (
-              <tr key={i}>
-                <td className={styles.td}><Text size={200}>{String(e.actorName ?? '')}</Text></td>
-                <td className={styles.td}><Badge appearance="outline" size="small">{String(e.eventType ?? '')}</Badge></td>
-                <td className={styles.td}><Text size={200}>{String(e.description ?? '')}</Text></td>
-                <td className={styles.td}><Text size={200}>{fmtDate(e.createdAt)}</Text></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {events.length > 0 && <ReportDataGrid items={events} columns={columns} />}
       </div>
     )
   }

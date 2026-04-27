@@ -7,16 +7,16 @@ import { ArrowRightRegular } from '@fluentui/react-icons'
 // ── Industry colour map ───────────────────────────────────────────────────────
 
 const INDUSTRY_COLOURS: Record<string, { bg: string; text: string; border: string }> = {
-  'Mining & Resources':        { bg: '#FFF8E1', text: '#F7B900', border: '#F7B900' },
-  'Construction & Engineering':{ bg: '#EFF6FC', text: '#0078D4', border: '#0078D4' },
-  'Healthcare':                { bg: '#F0FFF0', text: '#13A10E', border: '#13A10E' },
-  'Manufacturing':             { bg: '#F5F0FF', text: '#8764B8', border: '#8764B8' },
-  'Aviation':                  { bg: '#E8FAFB', text: '#00B7C3', border: '#00B7C3' },
-  'Legal & Fiduciary':         { bg: '#FFF0F2', text: '#C4314B', border: '#C4314B' },
+  'Mining & Resources':         { bg: 'var(--sp-warning-light)', text: 'var(--sp-warning-dark)', border: 'var(--sp-warning)' },
+  'Construction & Engineering': { bg: 'var(--sp-blue-50)', text: 'var(--sp-blue-500)', border: 'var(--sp-blue-200)' },
+  Healthcare:                   { bg: 'var(--sp-success-light)', text: 'var(--sp-success-dark)', border: 'var(--sp-success)' },
+  Manufacturing:                { bg: 'var(--sp-blue-100)', text: 'var(--sp-blue-600)', border: 'var(--sp-blue-200)' },
+  Aviation:                     { bg: 'var(--sp-blue-50)', text: 'var(--sp-teal)', border: 'var(--sp-teal)' },
+  'Legal & Fiduciary':          { bg: 'var(--sp-danger-light)', text: 'var(--sp-danger-dark)', border: 'var(--sp-danger)' },
 }
 
 function getIndustryColour(industry: string) {
-  return INDUSTRY_COLOURS[industry] ?? { bg: '#F5F5F5', text: '#666', border: '#ccc' }
+  return INDUSTRY_COLOURS[industry] ?? { bg: 'var(--sp-gray-100)', text: 'var(--sp-gray-600)', border: 'var(--sp-gray-200)' }
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -26,20 +26,21 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusLarge,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: 'var(--sp-radius-lg)',
+    border: '0.5px solid var(--sp-blue-100)',
     padding: tokens.spacingVerticalXL,
     gap: tokens.spacingVerticalM,
     height: '100%',
     boxSizing: 'border-box',
+    boxShadow: 'var(--sp-shadow-2)',
   },
   industryBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     padding: '3px 10px',
-    borderRadius: tokens.borderRadiusCircular,
+    borderRadius: 'var(--sp-radius-pill)',
     fontSize: '11px',
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: '0.02em',
     border: '1.5px solid',
     width: 'fit-content',

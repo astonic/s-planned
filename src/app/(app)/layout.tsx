@@ -23,7 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <FluentWrapper>
       <AppShell session={session} orgName={orgName} orgSlug={orgSlug} orgLogoUrl={orgLogoUrl}>
-        <main style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+        <main className="sp-main">
           {children}
         </main>
       </AppShell>

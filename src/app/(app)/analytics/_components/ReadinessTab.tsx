@@ -87,11 +87,16 @@ const useStyles = makeStyles({
   progressBar: {
     flex: 1,
     height: '8px',
-    borderRadius: '4px',
-    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: 'var(--sp-radius-pill)',
+    backgroundColor: 'var(--sp-gray-100)',
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: '4px', backgroundColor: tokens.colorBrandBackground },
+  progressFill: {
+    height: '100%',
+    borderRadius: 'var(--sp-radius-pill)',
+    background: 'var(--sp-grad-primary)',
+    boxShadow: 'var(--sp-glow-blue)',
+  },
   statRow: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -101,9 +106,9 @@ const useStyles = makeStyles({
 })
 
 function getReadinessColor(pct: number) {
-  if (pct >= 80) return '#107C10'
-  if (pct >= 50) return '#FF8C00'
-  return '#C50F1F'
+  if (pct >= 80) return 'var(--sp-success)'
+  if (pct >= 50) return 'var(--sp-warning)'
+  return 'var(--sp-danger)'
 }
 
 export function ReadinessTab({
@@ -185,7 +190,6 @@ export function ReadinessTab({
               <YAxis tick={{ fontSize: 11 }} domain={[0, 'auto']} />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 6 }}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 formatter={(v: any, name: any) => [v, name === 'closed' ? 'Closed' : 'Open'] as [any, any]}
               />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
@@ -206,7 +210,6 @@ export function ReadinessTab({
             <YAxis tick={{ fontSize: 11 }} unit="%" domain={[0, 100]} />
             <Tooltip
               contentStyle={{ fontSize: 12, borderRadius: 6 }}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(v: any) => [`${v}%`, 'Readiness'] as [any, any]}
             />
             <Bar dataKey="pct" name="Readiness %" radius={[4, 4, 0, 0]}>

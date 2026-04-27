@@ -272,7 +272,7 @@ export async function updateDeliverableStatus(
 
 export async function updateDeliverableField(
   id: string,
-  field: 'notes' | 'startDate' | 'targetDate' | 'description',
+  field: 'name' | 'notes' | 'startDate' | 'targetDate' | 'description',
   value: string | null,
 ): Promise<ActionResult> {
   try {

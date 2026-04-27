@@ -78,21 +78,21 @@ export default function TemplateGalleryPage() {
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           padding: '4px 14px', borderRadius: 999,
-          background: 'linear-gradient(135deg,rgba(20,116,203,0.08),rgba(20,116,203,0.04))',
-          border: '1px solid rgba(20,116,203,0.18)',
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(23,87,194,0.04))',
+          border: '1px solid rgba(59,130,246,0.18)',
           marginBottom: 16,
         }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#1474CB', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--sp-blue-500)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
             Template Gallery
           </span>
         </div>
         <h1 style={{
-          fontSize: 40, fontWeight: 800, color: '#0D1B2A',
+          fontSize: 40, fontWeight: 800, color: 'var(--sp-gray-800)',
           letterSpacing: '-0.5px', lineHeight: 1.15, margin: '0 0 16px',
         }}>
           Start from a proven blueprint
         </h1>
-        <p style={{ fontSize: 17, color: '#4A6280', maxWidth: 560, margin: '0 auto', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 17, color: 'var(--sp-gray-600)', maxWidth: 560, margin: '0 auto', lineHeight: 1.6 }}>
           Industry-ready operational readiness templates built by practitioners.
           Clone, customise, and launch in minutes.
         </p>
@@ -109,8 +109,8 @@ export default function TemplateGalleryPage() {
           { value: 'Free', label: 'Always free to browse' },
         ].map((s) => (
           <div key={s.label} style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#1474CB' }}>{s.value}</div>
-            <div style={{ fontSize: 13, color: '#4A6280', marginTop: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--sp-blue-500)' }}>{s.value}</div>
+            <div style={{ fontSize: 13, color: 'var(--sp-gray-600)', marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -130,22 +130,23 @@ export default function TemplateGalleryPage() {
       <div style={{
         marginTop: 72, textAlign: 'center',
         padding: '48px 32px',
-        borderRadius: 16,
-        background: 'linear-gradient(160deg,#F0F7FF 0%,#FAFCFF 100%)',
-        border: '1px solid rgba(20,116,203,0.12)',
+        borderRadius: 'var(--sp-radius-lg)',
+        background: 'linear-gradient(135deg, rgba(59,130,246,0.08), rgba(23,87,194,0.04))',
+        border: '1px solid rgba(59,130,246,0.18)',
       }}>
-        <h2 style={{ fontSize: 26, fontWeight: 700, color: '#0D1B2A', marginBottom: 12 }}>
+        <h2 style={{ fontSize: 26, fontWeight: 700, color: 'var(--sp-gray-800)', marginBottom: 12 }}>
           Need a custom template?
         </h2>
-        <p style={{ fontSize: 15, color: '#4A6280', marginBottom: 24, maxWidth: 480, margin: '0 auto 24px' }}>
+        <p style={{ fontSize: 15, color: 'var(--sp-gray-600)', marginBottom: 24, maxWidth: 480, margin: '0 auto 24px' }}>
           Create your own readiness framework from scratch, or clone and adapt any template to match your project structure.
         </p>
         <a
           href="/register"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '11px 28px', borderRadius: 8,
-            background: 'linear-gradient(135deg,#1474CB,#0D2A4A)',
+            padding: '11px 28px', borderRadius: 'var(--sp-radius-pill)',
+            background: 'var(--sp-grad-primary)',
+            boxShadow: 'var(--sp-shadow-2)',
             color: '#fff', fontWeight: 600, fontSize: 15, textDecoration: 'none',
           }}
         >
