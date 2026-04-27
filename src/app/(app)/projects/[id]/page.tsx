@@ -8,21 +8,38 @@ import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
 import type { ProjectPhase, RAIDSeverity } from '@prisma/client'
 import type { RAIDItemWithCount } from './raid/_components/RAIDLogView'
+import { projectAccessWhere } from '@/lib/project-access'
+import { getProjectNotificationSuggestions } from '@/lib/actions/project-notifications'
+import { getLatestAISuggestion, getAIRefreshStatus } from '@/lib/actions/ai-suggestions'
 
 interface Props {
   params: { id: string }
+  searchParams?: { tab?: string }
 }
 
-export default async function ProjectDetailPage({ params }: Props) {
+type ProjectTab = 'overview' | 'deliverables' | 'decisions' | 'raid' | 'notifications' | 'ai'
+
+function getInitialTab(value: string | undefined): ProjectTab {
+  if (value === 'deliverables' || value === 'decisions' || value === 'raid' || value === 'notifications' || value === 'ai') return value
+  return 'overview'
+}
+
+export default async function ProjectDetailPage({ params, searchParams }: Props) {
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
 
   const organizationId = session.currentOrganizationId
+  const projectWhere = projectAccessWhere({
+    orgId: organizationId,
+    userId: session.user.id,
+    role: session.role ?? 'viewer',
+  })
 
-  const project = await prisma.project.findUnique({
-    where: { id: params.id },
+  const project = await prisma.project.findFirst({
+    where: { ...projectWhere, id: params.id },
     include: {
       template: { select: { name: true } },
+      notificationSettings: true,
       focusAreaExecutions: {
         orderBy: { order: 'asc' },
         include: {
@@ -42,7 +59,7 @@ export default async function ProjectDetailPage({ params }: Props) {
     },
   })
 
-  if (!project || project.organizationId !== organizationId) notFound()
+  if (!project) notFound()
 
   // ── Compute stats ────────────────────────────────────────────────────────────
 
@@ -126,11 +143,11 @@ export default async function ProjectDetailPage({ params }: Props) {
     closedCount: raidItems.filter((i) => i.status === 'closed').length,
   }
 
-  const [recentActivityRows, recentActivityTypes, decisionRows] = await Promise.all([
+  const [recentActivityRows, recentActivityTypes, decisionRows, notificationSuggestions, latestAISuggestion, aiRefreshStatus] = await Promise.all([
     prisma.auditEvent.findMany({
       where: { organizationId, projectId: params.id },
       orderBy: { createdAt: 'desc' },
-      take: 21,
+      take: 11,
       select: { id: true, actorName: true, eventType: true, description: true, createdAt: true },
     }),
     prisma.auditEvent.findMany({
@@ -147,10 +164,13 @@ export default async function ProjectDetailPage({ params }: Props) {
         status: true, comments: true, loggedBy: true, createdAt: true,
       },
     }),
+    getProjectNotificationSuggestions(params.id),
+    getLatestAISuggestion(params.id),
+    getAIRefreshStatus(params.id),
   ])
 
-  const recentActivity = recentActivityRows.slice(0, 20)
-  const recentActivityHasMore = recentActivityRows.length > 20
+  const recentActivity = recentActivityRows.slice(0, 10)
+  const recentActivityHasMore = recentActivityRows.length > 10
 
   return (
     <>
@@ -164,6 +184,20 @@ export default async function ProjectDetailPage({ params }: Props) {
       />
       <ProjectTabs
         projectId={params.id}
+        initialTab={getInitialTab(searchParams?.tab)}
+        notificationSettings={{
+          notifyEmail: project.notificationSettings?.notifyEmail ?? true,
+          notifyReminders: project.notificationSettings?.notifyReminders ?? true,
+          notifyRaid: project.notificationSettings?.notifyRaid ?? true,
+          notifyDigest: project.notificationSettings?.notifyDigest ?? false,
+        }}
+        notificationSuggestions={notificationSuggestions}
+        aiSuggestions={{
+          initialSuggestion: latestAISuggestion.ok ? (latestAISuggestion.data ?? null) : null,
+          refreshUsed: aiRefreshStatus.ok ? aiRefreshStatus.data.used : 0,
+          refreshMax: aiRefreshStatus.ok ? aiRefreshStatus.data.max : 10,
+          aiEnabled: aiRefreshStatus.ok ? aiRefreshStatus.data.aiEnabled : false,
+        }}
         decisions={decisionRows}
         deliverablesProject={project}
         raid={{ items: raidItems, stats: raidStats }}

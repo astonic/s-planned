@@ -16,19 +16,27 @@ export default async function SettingsPage() {
   })
   if (!membership) redirect('/')
 
-  const [org, members, invites] = await Promise.all([
+  const [org, members, invites, projects] = await Promise.all([
     prisma.organization.findUnique({
       where: { id: orgId },
       include: { settings: true },
     }),
     prisma.organizationMembership.findMany({
       where: { organizationId: orgId },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        projectAssignments: { select: { projectId: true } },
+      },
       orderBy: { createdAt: 'asc' },
     }),
     prisma.invite.findMany({
       where: { organizationId: orgId, status: 'pending' },
       orderBy: { sentAt: 'desc' },
+    }),
+    prisma.project.findMany({
+      where: { organizationId: orgId },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
     }),
   ])
 
@@ -56,10 +64,11 @@ export default async function SettingsPage() {
           smtpFrom={s?.smtpFrom}
           smtpFromName={s?.smtpFromName}
           smtpSecure={s?.smtpSecure ?? true}
-          notifyEmail={s?.notifyEmail ?? true}
-          notifyReminders={s?.notifyReminders ?? true}
-          notifyRaid={s?.notifyRaid ?? true}
-          notifyDigest={s?.notifyDigest ?? false}
+          whatsappEnabled={s?.whatsappEnabled ?? false}
+          whatsappProvider={s?.whatsappProvider}
+          whatsappPhoneNumberId={s?.whatsappPhoneNumberId}
+          whatsappBusinessAccountId={s?.whatsappBusinessAccountId}
+          whatsappFromNumber={s?.whatsappFromNumber}
           members={members.map((m) => ({
             id: m.id,
             userId: m.userId,
@@ -67,7 +76,9 @@ export default async function SettingsPage() {
             email: m.user.email ?? '',
             role: m.role,
             isCurrentUser: m.userId === session.user.id,
+            assignedProjectIds: m.projectAssignments.map((assignment) => assignment.projectId),
           }))}
+          projectOptions={projects}
           pendingInvites={invites.map((inv) => ({
             id: inv.id,
             email: inv.email,
@@ -85,6 +96,17 @@ export default async function SettingsPage() {
           oidcDiscoveryUrl={s?.oidcDiscoveryUrl}
           ssoAutoProvision={s?.ssoAutoProvision}
           ssoDefaultRole={s?.ssoDefaultRole}
+          ai={{
+            aiEnabled: s?.aiEnabled ?? false,
+            aiProvider: s?.aiProvider ?? 'anthropic',
+            aiModel: s?.aiModel ?? 'claude-sonnet-4-6',
+            aiDailyRefreshLimit: s?.aiDailyRefreshLimit ?? 10,
+            aiAnalyzeActivity: s?.aiAnalyzeActivity ?? true,
+            aiAnalyzeDeliverables: s?.aiAnalyzeDeliverables ?? true,
+            aiAnalyzeRaid: s?.aiAnalyzeRaid ?? true,
+            aiAnalyzeDecisions: s?.aiAnalyzeDecisions ?? true,
+            aiAnalyzeNotes: s?.aiAnalyzeNotes ?? true,
+          }}
         />
       </div>
     </>

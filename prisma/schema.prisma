@@ -101,6 +101,7 @@ model OrganizationMembership {
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectAssignments ProjectAssignment[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -108,6 +109,23 @@ model OrganizationMembership {
   @@unique([organizationId, userId])
   @@index([organizationId])
   @@map("organization_memberships")
+}
+
+model ProjectAssignment {
+  id             String @id @default(uuid())
+  organizationId String
+  membershipId   String
+  projectId      String
+
+  membership OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  project    Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([membershipId, projectId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("project_assignments")
 }
 
 // ── Settings (Phase 10) ───────────────────────────────────────────────────────
@@ -133,6 +151,13 @@ model OrganizationSettings {
   smtpFrom        String?
   smtpFromName    String?
   smtpSecure      Boolean     @default(true)
+  // WhatsApp
+  whatsappEnabled Boolean      @default(false)
+  whatsappProvider String      @default("meta")
+  whatsappPhoneNumberId String?
+  whatsappBusinessAccountId String?
+  whatsappAccessToken String?
+  whatsappFromNumber String?
   // Notifications
   notifyEmail     Boolean     @default(true)
   notifyReminders Boolean     @default(true)
@@ -164,6 +189,17 @@ model OrganizationSettings {
   oidcUserinfoUrl String?
   oidcJwksUrl     String?
   oidcScope       String      @default("openid profile email") // Space-separated scopes
+  // AI Suggestions
+  aiEnabled              Boolean  @default(false)
+  aiProvider             String   @default("anthropic")
+  aiModel                String   @default("claude-sonnet-4-6")
+  aiApiKey               String?  @db.Text
+  aiDailyRefreshLimit    Int      @default(10)
+  aiAnalyzeActivity      Boolean  @default(true)
+  aiAnalyzeDeliverables  Boolean  @default(true)
+  aiAnalyzeRaid          Boolean  @default(true)
+  aiAnalyzeDecisions     Boolean  @default(true)
+  aiAnalyzeNotes         Boolean  @default(true)
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -293,29 +329,35 @@ model DeliverableTemplate {
 
 model AcceptanceCriteria {
   id                   String              @id @default(uuid())
-  deliverableTemplateId String
+  deliverableTemplateId String?
+  deliverableExecutionId String?
   description          String
   verificationMethod   String?
 
-  deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  deliverableTemplate  DeliverableTemplate? @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  deliverableExecution DeliverableExecution? @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
   completions          CriteriaCompletion[]
 
   @@index([deliverableTemplateId])
+  @@index([deliverableExecutionId])
   @@map("acceptance_criteria")
 }
 
 model EvidenceRequirement {
   id                   String              @id @default(uuid())
-  deliverableTemplateId String
+  deliverableTemplateId String?
+  deliverableExecutionId String?
   name                 String
   type                 String?
   description          String?
   required             Boolean             @default(true)
 
-  deliverableTemplate  DeliverableTemplate @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  deliverableTemplate  DeliverableTemplate? @relation(fields: [deliverableTemplateId], references: [id], onDelete: Cascade)
+  deliverableExecution DeliverableExecution? @relation(fields: [deliverableExecutionId], references: [id], onDelete: Cascade)
   evidenceItems        Evidence[]
 
   @@index([deliverableTemplateId])
+  @@index([deliverableExecutionId])
   @@map("evidence_requirements")
 }
 
@@ -379,12 +421,73 @@ model Project {
   raidItems           RAIDItem[]
   decisions           Decision[]
   reports             Report[]
+  assignments         ProjectAssignment[]
+  notificationSettings ProjectNotificationSettings?
+  notificationMessages ProjectNotificationMessage[]
+  aiSuggestions       AISuggestion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@map("projects")
+}
+
+model ProjectNotificationSettings {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  organizationId  String
+  notifyEmail     Boolean  @default(true)
+  notifyReminders Boolean  @default(true)
+  notifyRaid      Boolean  @default(true)
+  notifyDigest    Boolean  @default(false)
+
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("project_notification_settings")
+}
+
+enum ProjectNotificationChannel {
+  email
+  whatsapp
+}
+
+enum ProjectNotificationStatus {
+  sent
+  dismissed
+}
+
+model ProjectNotificationMessage {
+  id             String                     @id @default(uuid())
+  organizationId String
+  projectId      String
+  generatedKey   String
+  kind           String
+  channel        ProjectNotificationChannel
+  status         ProjectNotificationStatus
+  recipientType  String
+  recipientId    String?
+  recipientName  String
+  recipientEmail String?
+  recipientPhone String?
+  subject        String
+  body           String                     @db.Text
+  sentAt         DateTime?
+  dismissedAt    DateTime?
+
+  project        Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@unique([projectId, generatedKey, channel, recipientType, recipientId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("project_notification_messages")
 }
 
 model FocusAreaExecution {
@@ -448,6 +551,8 @@ model DeliverableExecution {
   owner               Person?              @relation("DeliverableOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   ownerId             String?
   evidenceItems       Evidence[]
+  evidenceRequirements EvidenceRequirement[]
+  acceptanceCriteria  AcceptanceCriteria[]
   criteriaCompletions CriteriaCompletion[]
   deliverableNotes    DeliverableNote[]
 
@@ -779,4 +884,54 @@ model ReportAccess {
 
   @@index([reportId])
   @@map("report_access")
+}
+
+// ── AI Suggestions ────────────────────────────────────────────────────────────
+
+model AISuggestion {
+  id             String   @id @default(uuid())
+  organizationId String
+  projectId      String
+  model          String
+  promptVersion  String   @default("1")
+
+  items          AISuggestionItem[]
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@map("ai_suggestions")
+}
+
+model AISuggestionItem {
+  id             String   @id @default(uuid())
+  suggestionId   String
+  type           String   // 'risk' | 'action' | 'insight'
+  priority       String   // 'high' | 'medium' | 'low'
+  title          String
+  description    String   @db.Text
+  actionType     String?  // 'send_reminder' | 'request_evidence' | 'create_raid'
+  actionPayload  Json?
+  dismissed      Boolean  @default(false)
+  executedAt     DateTime?
+  executedBy     String?
+
+  suggestion     AISuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+
+  @@index([suggestionId])
+  @@map("ai_suggestion_items")
+}
+
+model AIRefreshLog {
+  id             String   @id @default(uuid())
+  organizationId String
+  projectId      String
+  date           String   // YYYY-MM-DD
+  count          Int      @default(0)
+
+  @@unique([projectId, date])
+  @@index([organizationId])
+  @@map("ai_refresh_logs")
 }

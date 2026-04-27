@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { DeliverableDetail } from './_components/DeliverableDetail'
+import { canAccessProject } from '@/lib/project-access'
 
 interface Props {
   params: { id: string; deliverableId: string }
@@ -41,6 +42,13 @@ export default async function DeliverableDetailPage({ params }: Props) {
 
   // Tenant check
   if (project.organizationId !== orgId) notFound()
+  const hasProjectAccess = await canAccessProject({
+    orgId,
+    userId: session.user.id,
+    role: session.role ?? 'viewer',
+    projectId: project.id,
+  })
+  if (!hasProjectAccess) notFound()
 
   const [
     linkedRAID,
@@ -106,20 +114,24 @@ export default async function DeliverableDetailPage({ params }: Props) {
     prisma.criteriaCompletion.findMany({
       where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
     }),
-    // Acceptance criteria from the deliverable template
-    deliverable.templateDeliverableId
-      ? prisma.acceptanceCriteria.findMany({
-          where: { deliverableTemplateId: deliverable.templateDeliverableId },
-          orderBy: { id: 'asc' },
-        })
-      : Promise.resolve([]),
-    // Evidence requirements from the deliverable template
-    deliverable.templateDeliverableId
-      ? prisma.evidenceRequirement.findMany({
-          where: { deliverableTemplateId: deliverable.templateDeliverableId },
-          orderBy: { id: 'asc' },
-        })
-      : Promise.resolve([]),
+    prisma.acceptanceCriteria.findMany({
+      where: {
+        OR: [
+          { deliverableExecutionId: deliverable.id },
+          ...(deliverable.templateDeliverableId ? [{ deliverableTemplateId: deliverable.templateDeliverableId }] : []),
+        ],
+      },
+      orderBy: { id: 'asc' },
+    }),
+    prisma.evidenceRequirement.findMany({
+      where: {
+        OR: [
+          { deliverableExecutionId: deliverable.id },
+          ...(deliverable.templateDeliverableId ? [{ deliverableTemplateId: deliverable.templateDeliverableId }] : []),
+        ],
+      },
+      orderBy: { id: 'asc' },
+    }),
     prisma.deliverableNote.findMany({
       where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
       orderBy: { createdAt: 'desc' },
@@ -152,7 +164,8 @@ export default async function DeliverableDetailPage({ params }: Props) {
         position: 'fixed',
         inset: 0,
         zIndex: 1000,
-        background: '#F5F7FB',
+        background: 'var(--sp-page-bg)',
+        color: 'var(--sp-page-fg)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -166,21 +179,21 @@ export default async function DeliverableDetailPage({ params }: Props) {
           alignItems: 'center',
           gap: 16,
           padding: '0 24px',
-          borderBottom: '1px solid #DDE3EA',
-          background: '#FFFFFF',
-          boxShadow: '0 1px 2px rgba(15, 30, 61, 0.08)',
+          borderBottom: '1px solid var(--sp-gray-200)',
+          background: 'var(--sp-surface)',
+          boxShadow: 'var(--sp-shadow-1)',
         }}
       >
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ color: '#64748B', fontSize: 12, fontWeight: 700, letterSpacing: 0.4 }}>
+          <div style={{ color: 'var(--sp-gray-600)', fontSize: 12, fontWeight: 700, letterSpacing: 0.4 }}>
             Projects / {project.name} / Deliverables
           </div>
-          <div style={{ color: '#172033', fontSize: 16, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ color: 'var(--sp-page-fg)', fontSize: 16, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {deliverable.name}
           </div>
         </div>
         <Link
-          href={`/projects/${project.id}`}
+          href={`/projects/${project.id}?tab=deliverables`}
           aria-label="Close deliverable details"
           style={{
             width: 36,
@@ -189,10 +202,10 @@ export default async function DeliverableDetailPage({ params }: Props) {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#334155',
+            color: 'var(--sp-gray-600)',
             textDecoration: 'none',
-            border: '1px solid #DDE3EA',
-            background: '#FFFFFF',
+            border: '1px solid var(--sp-gray-200)',
+            background: 'var(--sp-surface)',
             fontSize: 22,
             lineHeight: 1,
           }}
@@ -200,7 +213,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
           X
         </Link>
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: 'clamp(20px, 3vw, 40px)' }}>
         <DeliverableDetail
           deliverable={deliverable}
           projectId={project.id}

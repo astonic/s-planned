@@ -30,6 +30,10 @@ async function upsertSettings(orgId: string, data: Record<string, unknown>) {
   })
 }
 
+function withoutUndefined(data: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined))
+}
+
 // ── General ───────────────────────────────────────────────────────────────────
 
 export interface GeneralSettingsInput {
@@ -136,15 +140,15 @@ export async function saveSmtpSettings(input: SmtpSettingsInput): Promise<Action
   const auth = await getAdminOrgId()
   if (!auth) return { ok: false, error: 'Unauthorized' }
 
-  await upsertSettings(auth.orgId, {
+  await upsertSettings(auth.orgId, withoutUndefined({
     smtpHost: input.smtpHost ?? null,
     smtpPort: input.smtpPort ?? null,
     smtpUser: input.smtpUser ?? null,
-    smtpPassword: input.smtpPassword ?? null,
+    smtpPassword: input.smtpPassword,
     smtpFrom: input.smtpFrom ?? null,
     smtpFromName: input.smtpFromName ?? null,
     smtpSecure: input.smtpSecure,
-  })
+  }))
 
   await prisma.auditEvent.create({
     data: {
@@ -182,6 +186,54 @@ export async function testSmtpConnection(input: SmtpSettingsInput): Promise<Acti
     }
     return { ok: false, error: `Could not reach SMTP host: ${msg}` }
   }
+}
+
+// ── WhatsApp ─────────────────────────────────────────────────────────────────
+
+export interface WhatsAppSettingsInput {
+  whatsappEnabled: boolean
+  whatsappProvider: string
+  whatsappPhoneNumberId?: string
+  whatsappBusinessAccountId?: string
+  whatsappAccessToken?: string
+  whatsappFromNumber?: string
+}
+
+export async function saveWhatsAppSettings(input: WhatsAppSettingsInput): Promise<ActionResult> {
+  const auth = await getAdminOrgId()
+  if (!auth) return { ok: false, error: 'Unauthorized' }
+
+  await upsertSettings(auth.orgId, withoutUndefined({
+    whatsappEnabled: input.whatsappEnabled,
+    whatsappProvider: input.whatsappProvider || 'meta',
+    whatsappPhoneNumberId: input.whatsappPhoneNumberId ?? null,
+    whatsappBusinessAccountId: input.whatsappBusinessAccountId ?? null,
+    whatsappAccessToken: input.whatsappAccessToken,
+    whatsappFromNumber: input.whatsappFromNumber ?? null,
+  }))
+
+  await prisma.auditEvent.create({
+    data: {
+      organizationId: auth.orgId,
+      actorName: auth.actorName,
+      eventType: 'settings.whatsapp.updated',
+      description: 'WhatsApp settings updated',
+    },
+  })
+
+  return { ok: true, data: undefined }
+}
+
+export async function testWhatsAppSettings(input: WhatsAppSettingsInput): Promise<ActionResult<{ message: string }>> {
+  const auth = await getAdminOrgId()
+  if (!auth) return { ok: false, error: 'Unauthorized' }
+
+  if (!input.whatsappEnabled) return { ok: true, data: { message: 'WhatsApp notifications are disabled.' } }
+  if (!input.whatsappPhoneNumberId || !input.whatsappAccessToken) {
+    return { ok: false, error: 'Phone number ID and access token are required.' }
+  }
+
+  return { ok: true, data: { message: 'WhatsApp configuration is complete. Sending uses the saved Meta WhatsApp credentials.' } }
 }
 
 // ── Notifications ─────────────────────────────────────────────────────────────
@@ -267,4 +319,121 @@ export async function removeMember(membershipId: string): Promise<ActionResult> 
   })
 
   return { ok: true, data: undefined }
+}
+
+export async function saveMemberProjectAssignments(
+  membershipId: string,
+  projectIds: string[],
+): Promise<ActionResult<{ projectIds: string[] }>> {
+  const auth = await getAdminOrgId()
+  if (!auth) return { ok: false, error: 'Unauthorized' }
+
+  const membership = await prisma.organizationMembership.findUnique({
+    where: { id: membershipId },
+    select: { organizationId: true, role: true },
+  })
+  if (!membership || membership.organizationId !== auth.orgId) return { ok: false, error: 'Not found' }
+  if (membership.role === 'owner') return { ok: false, error: 'Owners already have access to all projects.' }
+
+  const uniqueProjectIds = Array.from(new Set(projectIds))
+  const validProjects = uniqueProjectIds.length === 0
+    ? []
+    : await prisma.project.findMany({
+        where: { id: { in: uniqueProjectIds }, organizationId: auth.orgId },
+        select: { id: true },
+      })
+  const validProjectIds = validProjects.map((project) => project.id)
+
+  await prisma.$transaction(async (tx) => {
+    await tx.projectAssignment.deleteMany({
+      where: { organizationId: auth.orgId, membershipId },
+    })
+
+    if (validProjectIds.length > 0) {
+      await tx.projectAssignment.createMany({
+        data: validProjectIds.map((projectId) => ({
+          organizationId: auth.orgId,
+          membershipId,
+          projectId,
+        })),
+        skipDuplicates: true,
+      })
+    }
+
+    await tx.auditEvent.create({
+      data: {
+        organizationId: auth.orgId,
+        actorName: auth.actorName,
+        eventType: 'member.project_assignments.updated',
+        description: `Updated project assignments for member`,
+        metadata: { membershipId, projectIds: validProjectIds },
+      },
+    })
+  })
+
+  return { ok: true, data: { projectIds: validProjectIds } }
+}
+
+// ── AI Settings ───────────────────────────────────────────────────────────────
+
+export interface AISettingsInput {
+  aiEnabled: boolean
+  aiProvider: string
+  aiModel: string
+  aiApiKey?: string
+  aiDailyRefreshLimit: number
+  aiAnalyzeActivity: boolean
+  aiAnalyzeDeliverables: boolean
+  aiAnalyzeRaid: boolean
+  aiAnalyzeDecisions: boolean
+  aiAnalyzeNotes: boolean
+}
+
+export async function saveAISettings(input: AISettingsInput): Promise<ActionResult> {
+  try {
+    const auth = await getAdminOrgId()
+    if (!auth) return { ok: false, error: 'Unauthorized' }
+
+    await prisma.organizationSettings.upsert({
+      where: { organizationId: auth.orgId },
+      create: {
+        organizationId: auth.orgId,
+        aiEnabled: input.aiEnabled,
+        aiProvider: input.aiProvider,
+        aiModel: input.aiModel,
+        aiApiKey: input.aiApiKey ?? null,
+        aiDailyRefreshLimit: input.aiDailyRefreshLimit,
+        aiAnalyzeActivity: input.aiAnalyzeActivity,
+        aiAnalyzeDeliverables: input.aiAnalyzeDeliverables,
+        aiAnalyzeRaid: input.aiAnalyzeRaid,
+        aiAnalyzeDecisions: input.aiAnalyzeDecisions,
+        aiAnalyzeNotes: input.aiAnalyzeNotes,
+      },
+      update: {
+        aiEnabled: input.aiEnabled,
+        aiProvider: input.aiProvider,
+        aiModel: input.aiModel,
+        ...(input.aiApiKey ? { aiApiKey: input.aiApiKey } : {}),
+        aiDailyRefreshLimit: input.aiDailyRefreshLimit,
+        aiAnalyzeActivity: input.aiAnalyzeActivity,
+        aiAnalyzeDeliverables: input.aiAnalyzeDeliverables,
+        aiAnalyzeRaid: input.aiAnalyzeRaid,
+        aiAnalyzeDecisions: input.aiAnalyzeDecisions,
+        aiAnalyzeNotes: input.aiAnalyzeNotes,
+      },
+    })
+
+    await prisma.auditEvent.create({
+      data: {
+        organizationId: auth.orgId,
+        actorName: auth.actorName,
+        eventType: 'settings.ai.updated',
+        description: 'AI settings updated',
+      },
+    })
+
+    return { ok: true, data: undefined }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
 }

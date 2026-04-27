@@ -14,6 +14,7 @@ import {
 } from '@fluentui/react-icons'
 import type { ProjectWorkspaceData } from './workspace-types'
 import { flatDeliverables } from './workspace-types'
+import { AddDeliverableWizard } from './AddDeliverableWizard'
 import { GridView } from './GridView'
 import { BoardView } from './BoardView'
 import { TimelineView } from './TimelineView'
@@ -113,6 +114,9 @@ export function WorkspaceView({ project }: { project: ProjectWorkspaceData }) {
         <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
           {allDs.length} deliverables · {pct}% complete
         </Text>
+        <div style={{ marginLeft: 'auto' }}>
+          <AddDeliverableWizard projectId={project.id} focusAreas={project.focusAreaExecutions} />
+        </div>
       </div>
 
       <div className={s.content}>

@@ -6,6 +6,23 @@ import path from 'path'
 
 const STORAGE_ROOT = process.env.STORAGE_PATH ?? path.join(process.cwd(), 'uploads')
 
+const EXT_MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.txt': 'text/plain',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+}
+
+// Types that browsers can display inline
+const INLINE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'])
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { path: string[] } }
@@ -31,32 +48,25 @@ export async function GET(
     return new NextResponse('Forbidden', { status: 403 })
   }
 
+  let buffer: Buffer
   try {
-    const buffer = await fs.readFile(absPath)
-    const ext = path.extname(absPath).toLowerCase()
-    const contentType = EXT_MIME[ext] ?? 'application/octet-stream'
-    return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'private, max-age=3600',
-      },
-    })
+    buffer = await fs.readFile(absPath)
   } catch {
     return new NextResponse('Not Found', { status: 404 })
   }
-}
 
-const EXT_MIME: Record<string, string> = {
-  '.pdf': 'application/pdf',
-  '.doc': 'application/msword',
-  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  '.xls': 'application/vnd.ms-excel',
-  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  '.txt': 'text/plain',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
+  const ext = path.extname(absPath).toLowerCase()
+  const contentType = EXT_MIME[ext] ?? 'application/octet-stream'
+  const filename = path.basename(absPath)
+  const disposition = INLINE_TYPES.has(contentType) ? 'inline' : `attachment; filename="${filename}"`
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      'Content-Type': contentType,
+      'Content-Length': String(buffer.byteLength),
+      'Content-Disposition': disposition,
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, max-age=3600',
+    },
+  })
 }

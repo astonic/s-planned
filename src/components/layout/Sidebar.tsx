@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { makeStyles, tokens, Avatar, Text, Tooltip, Button } from '@fluentui/react-components'
 import {
-  GridRegular,
   FolderRegular,
   PeopleRegular,
   DataBarVerticalRegular,
@@ -50,17 +50,23 @@ const useStyles = makeStyles({
       justifyContent: 'flex-start',
     },
   },
-  logoText: {
-    color: '#F0F4FF',
-    fontWeight: 800,
-    fontSize: tokens.fontSizeBase400,
-    letterSpacing: '-0.5px',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    display: 'none',
-    '@media (min-width: 1024px)': {
-      display: 'inline',
-    },
+  logoImageChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 'var(--sp-radius-md)',
+    padding: '4px 8px',
+    boxShadow: '0 8px 24px rgba(23,87,194,0.18), 0 4px 8px rgba(23,87,194,0.10)',
+    flexShrink: 0,
+  },
+  logoIconChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 'var(--sp-radius-md)',
+    boxShadow: '0 8px 24px rgba(23,87,194,0.18), 0 4px 8px rgba(23,87,194,0.10)',
+    flexShrink: 0,
   },
   nav: {
     flex: 1,
@@ -172,31 +178,16 @@ const useStyles = makeStyles({
     height: '24px',
     padding: '0',
     border: '1.5px solid var(--sp-blue-100)',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'var(--sp-surface)',
     boxShadow: 'var(--sp-shadow-2)',
     display: 'none',
     '@media (min-width: 1024px)': {
       display: 'inline-flex',
     },
   },
-  logoMark: {
-    width: '32px',
-    height: '32px',
-    borderRadius: 'var(--sp-radius-md)',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'var(--sp-grad-primary)',
-    color: '#FFFFFF',
-    fontSize: '18px',
-    fontWeight: 800,
-    boxShadow: '0 8px 24px rgba(23,87,194,0.18), 0 4px 8px rgba(23,87,194,0.10)',
-    flexShrink: 0,
-  },
 })
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', href: '/', icon: GridRegular },
   { label: 'Projects', href: '/projects', icon: FolderRegular },
   { label: 'Stakeholders', href: '/stakeholders', icon: PeopleRegular },
   { label: 'Analytics', href: '/analytics', icon: DataBarVerticalRegular },
@@ -225,8 +216,15 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
       style={{ position: 'relative' }}
     >
       <div className={styles.logo}>
-        <span className={styles.logoMark}>S</span>
-        {showExpandedLabels && <span className={styles.logoText}>S-planned</span>}
+        {showExpandedLabels ? (
+          <Link href="/" className={styles.logoImageChip} aria-label="S-Planned dashboard">
+            <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority style={{ width: 144, height: 'auto', display: 'block' }} />
+          </Link>
+        ) : (
+          <Link href="/" className={styles.logoIconChip} aria-label="S-Planned dashboard">
+            <Image src="/files/s-planned-favicon-32.svg" alt="S-Planned" width={32} height={32} priority />
+          </Link>
+        )}
       </div>
 
       <nav className={styles.nav}>

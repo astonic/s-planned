@@ -5,8 +5,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
+import { assertProjectAccess } from '@/lib/project-access'
 import { createLogger } from '@/lib/logger'
-import type { DeliverableStatus } from '@prisma/client'
+import type { DeliverableStatus, EvidenceType, ProjectPhase } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,35 @@ const updateProjectSchema = z.object({
   status: z.enum(['active', 'blocked', 'completed', 'archived']).optional(),
   startDate: z.coerce.date().optional().nullable(),
   targetDate: z.coerce.date().optional().nullable(),
+})
+
+const projectNotificationSettingsSchema = z.object({
+  notifyEmail: z.boolean().default(true),
+  notifyReminders: z.boolean().default(true),
+  notifyRaid: z.boolean().default(true),
+  notifyDigest: z.boolean().default(false),
+})
+
+const createDeliverableSchema = z.object({
+  subSectionExecutionId: z.string().min(1),
+  code: z.string().min(1).max(50),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  phase: z.enum(['pre_commissioning', 'commissioning', 'ramp_up', 'handover']).nullable().optional(),
+  domain: z.string().optional(),
+  ownerId: z.string().nullable().optional(),
+  startDate: z.coerce.date().nullable().optional(),
+  targetDate: z.coerce.date().nullable().optional(),
+  checklistItems: z.array(z.object({
+    description: z.string().min(1),
+    verificationMethod: z.string().optional(),
+  })).default([]),
+  evidenceRequirements: z.array(z.object({
+    name: z.string().min(1),
+    type: z.enum(['document', 'image', 'link', 'sign_off']).default('document'),
+    required: z.boolean().default(true),
+    description: z.string().optional(),
+  })).default([]),
 })
 
 // ── Project CRUD ──────────────────────────────────────────────────────────────
@@ -131,6 +161,20 @@ export async function createProject(
         },
       })
 
+      const membership = await tx.organizationMembership.findUnique({
+        where: { organizationId_userId: { organizationId: orgId, userId: auth.userId } },
+        select: { id: true, role: true },
+      })
+      if (membership && membership.role !== 'owner') {
+        await tx.projectAssignment.create({
+          data: {
+            organizationId: orgId,
+            membershipId: membership.id,
+            projectId: proj.id,
+          },
+        })
+      }
+
       return proj
     })
 
@@ -159,6 +203,7 @@ export async function updateProject(
     logger = createLogger({ orgId, userId: auth.userId })
 
     await withTenant(orgId, async (tx) => {
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: id }, tx)
       const project = await tx.project.update({
         where: { id, organizationId: orgId },
         data: parsed,
@@ -194,6 +239,7 @@ export async function deleteProject(id: string): Promise<ActionResult> {
     logger = createLogger({ orgId, userId: auth.userId })
 
     await withTenant(orgId, async (tx) => {
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: id }, tx)
       const project = await tx.project.findUnique({
         where: { id, organizationId: orgId },
         select: { name: true },
@@ -222,7 +268,159 @@ export async function deleteProject(id: string): Promise<ActionResult> {
   }
 }
 
+// ── Project notification settings ────────────────────────────────────────────
+
+export async function saveProjectNotificationSettings(
+  projectId: string,
+  data: z.infer<typeof projectNotificationSettingsSchema>,
+): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth('member')
+    const parsed = projectNotificationSettingsSchema.parse(data)
+    const orgId = auth.orgId
+
+    await withTenant(orgId, async (tx) => {
+      const project = await tx.project.findUnique({
+        where: { id: projectId, organizationId: orgId },
+        select: { id: true, name: true },
+      })
+      if (!project) throw new Error('Project not found')
+
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
+
+      await tx.projectNotificationSettings.upsert({
+        where: { projectId },
+        create: { projectId, organizationId: orgId, ...parsed },
+        update: parsed,
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId,
+          actorName: auth.userName,
+          eventType: 'project.notifications.updated',
+          description: `Updated notification preferences for "${project.name}"`,
+          metadata: parsed,
+        },
+      })
+    })
+
+    revalidatePath(`/projects/${projectId}`)
+    return { ok: true, data: undefined }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
 // ── Deliverable actions ───────────────────────────────────────────────────────
+
+export async function createProjectDeliverable(
+  projectId: string,
+  data: z.infer<typeof createDeliverableSchema>,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const parsed = createDeliverableSchema.parse(data)
+
+    const deliverable = await withTenant(orgId, async (tx) => {
+      const subSection = await tx.subSectionExecution.findFirst({
+        where: {
+          id: parsed.subSectionExecutionId,
+          focusAreaExecution: { projectId },
+        },
+        select: {
+          id: true,
+          name: true,
+          focusAreaExecution: { select: { projectId: true, project: { select: { name: true, organizationId: true } } } },
+        },
+      })
+      if (!subSection || subSection.focusAreaExecution.project.organizationId !== orgId) {
+        throw new Error('Sub-section not found')
+      }
+
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
+
+      if (parsed.ownerId) {
+        const owner = await tx.person.findFirst({
+          where: { id: parsed.ownerId, organizationId: orgId },
+          select: { id: true },
+        })
+        if (!owner) throw new Error('Owner not found')
+      }
+
+      const existingCode = await tx.deliverableExecution.findFirst({
+        where: {
+          organizationId: orgId,
+          subSectionExecutionId: parsed.subSectionExecutionId,
+          code: parsed.code.trim(),
+        },
+        select: { id: true },
+      })
+      if (existingCode) throw new Error('A deliverable with this code already exists in the selected section.')
+
+      const created = await tx.deliverableExecution.create({
+        data: {
+          organizationId: orgId,
+          subSectionExecutionId: parsed.subSectionExecutionId,
+          code: parsed.code.trim(),
+          name: parsed.name.trim(),
+          description: parsed.description?.trim() || null,
+          phase: (parsed.phase ?? null) as ProjectPhase | null,
+          domain: parsed.domain?.trim() || null,
+          ownerId: parsed.ownerId || null,
+          startDate: parsed.startDate ?? null,
+          targetDate: parsed.targetDate ?? null,
+          acceptanceCriteria: parsed.checklistItems.length
+            ? {
+                create: parsed.checklistItems.map((item) => ({
+                  description: item.description.trim(),
+                  verificationMethod: item.verificationMethod?.trim() || null,
+                })),
+              }
+            : undefined,
+          evidenceRequirements: parsed.evidenceRequirements.length
+            ? {
+                create: parsed.evidenceRequirements.map((item) => ({
+                  name: item.name.trim(),
+                  type: item.type as EvidenceType,
+                  required: item.required,
+                  description: item.description?.trim() || null,
+                })),
+              }
+            : undefined,
+        },
+        select: { id: true, name: true, code: true },
+      })
+
+      await tx.auditEvent.create({
+        data: {
+          organizationId: orgId,
+          projectId,
+          deliverableExecutionId: created.id,
+          actorName: auth.userName,
+          eventType: 'deliverable.created',
+          description: `Created deliverable "${created.name}"`,
+          metadata: {
+            code: created.code,
+            subSection: subSection.name,
+            checklistItems: parsed.checklistItems.length,
+            evidenceRequirements: parsed.evidenceRequirements.length,
+          },
+        },
+      })
+
+      return created
+    })
+
+    revalidatePath(`/projects/${projectId}`)
+    revalidatePath(`/projects/${projectId}/workspace`)
+    return { ok: true, data: { id: deliverable.id } }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
 
 export async function updateDeliverableStatus(
   id: string,
@@ -240,6 +438,7 @@ export async function updateDeliverableStatus(
 
       const fromStatus = existing.status
       const projectId = existing.subSectionExecution.focusAreaExecution.projectId
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
 
       await tx.deliverableExecution.update({
         where: { id },
@@ -286,6 +485,7 @@ export async function updateDeliverableField(
       })
 
       const projectId = existing.subSectionExecution.focusAreaExecution.projectId
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
 
       // Build update data with proper typing
       let updateData: Record<string, unknown>
@@ -348,6 +548,7 @@ export async function searchDeliverables(
         select: { id: true },
       })
       if (!project) throw new Error('Project not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
 
       // Case-insensitive search on name, code, description using ilike
       const deliverables = await tx.deliverableExecution.findMany({
@@ -416,6 +617,7 @@ export async function searchRAIDItems(
         select: { id: true },
       })
       if (!project) throw new Error('Project not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId }, tx)
 
       // Search by title and description
       const raidItems = await tx.rAIDItem.findMany({

@@ -8,10 +8,11 @@ import { SpTabBar } from '@/components/ui/SpTabBar'
 import { GeneralSettingsForm } from './GeneralSettingsForm'
 import { StorageSettingsForm } from './StorageSettingsForm'
 import { SmtpSettingsForm } from './SmtpSettingsForm'
-import { NotificationSettingsForm } from './NotificationSettingsForm'
+import { WhatsAppSettingsForm } from './WhatsAppSettingsForm'
 import { UsersSettingsPanel, type MemberRow } from './UsersSettingsPanel'
 import { type PendingInvite } from './PendingInvitesTable'
 import { IdentitySettingsForm } from './IdentitySettingsForm'
+import { AISettingsForm, type AISettingsProps } from './AISettingsForm'
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
@@ -23,7 +24,7 @@ const useStyles = makeStyles({
   },
 })
 
-type TabId = 'general' | 'storage' | 'email' | 'notifications' | 'identity' | 'users'
+type TabId = 'general' | 'storage' | 'email' | 'whatsapp' | 'identity' | 'users' | 'ai'
 
 interface SettingsData {
   orgName: string
@@ -41,11 +42,13 @@ interface SettingsData {
   smtpFrom?: string | null
   smtpFromName?: string | null
   smtpSecure: boolean
-  notifyEmail: boolean
-  notifyReminders: boolean
-  notifyRaid: boolean
-  notifyDigest: boolean
+  whatsappEnabled: boolean
+  whatsappProvider?: string | null
+  whatsappPhoneNumberId?: string | null
+  whatsappBusinessAccountId?: string | null
+  whatsappFromNumber?: string | null
   members: MemberRow[]
+  projectOptions: { id: string; name: string }[]
   pendingInvites: PendingInvite[]
   ssoEnabled?: boolean
   ssoProtocol?: string | null
@@ -57,6 +60,7 @@ interface SettingsData {
   oidcDiscoveryUrl?: string | null
   ssoAutoProvision?: boolean
   ssoDefaultRole?: string | null
+  ai: AISettingsProps
 }
 
 export function SettingsShell(props: SettingsData) {
@@ -67,8 +71,9 @@ export function SettingsShell(props: SettingsData) {
     { value: 'general' as const, label: 'General' },
     { value: 'storage' as const, label: 'Storage' },
     { value: 'email' as const, label: 'Email (SMTP)' },
-    { value: 'notifications' as const, label: 'Notifications' },
+    { value: 'whatsapp' as const, label: 'WhatsApp' },
     { value: 'identity' as const, label: 'Identity' },
+    { value: 'ai' as const, label: 'AI' },
     { value: 'users' as const, label: 'Users' },
   ]
 
@@ -123,17 +128,18 @@ export function SettingsShell(props: SettingsData) {
             />
           </>
         )}
-        {tab === 'notifications' && (
+        {tab === 'whatsapp' && (
           <>
-            <Text size={400} weight="semibold" block className={styles.sectionTitle}>Notification Preferences</Text>
+            <Text size={400} weight="semibold" block className={styles.sectionTitle}>WhatsApp</Text>
             <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalL }} block>
-              Control which email notifications are sent from your organization.
+              Configure WhatsApp Cloud API details used when project notifications are sent through WhatsApp.
             </Text>
-            <NotificationSettingsForm
-              notifyEmail={props.notifyEmail}
-              notifyReminders={props.notifyReminders}
-              notifyRaid={props.notifyRaid}
-              notifyDigest={props.notifyDigest}
+            <WhatsAppSettingsForm
+              whatsappEnabled={props.whatsappEnabled}
+              whatsappProvider={props.whatsappProvider}
+              whatsappPhoneNumberId={props.whatsappPhoneNumberId}
+              whatsappBusinessAccountId={props.whatsappBusinessAccountId}
+              whatsappFromNumber={props.whatsappFromNumber}
             />
           </>
         )}
@@ -157,13 +163,26 @@ export function SettingsShell(props: SettingsData) {
             }} />
           </>
         )}
+        {tab === 'ai' && (
+          <>
+            <Text size={400} weight="semibold" block className={styles.sectionTitle}>AI Suggestions</Text>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalL }} block>
+              Configure the AI model used to analyse projects and surface risks, actions, and insights.
+            </Text>
+            <AISettingsForm {...props.ai} />
+          </>
+        )}
         {tab === 'users' && (
           <>
             <Text size={400} weight="semibold" block className={styles.sectionTitle}>Members</Text>
             <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: tokens.spacingVerticalL }} block>
               Manage members and their roles. Invite colleagues by email below.
             </Text>
-            <UsersSettingsPanel members={props.members} pendingInvites={props.pendingInvites} />
+            <UsersSettingsPanel
+              members={props.members}
+              pendingInvites={props.pendingInvites}
+              projectOptions={props.projectOptions}
+            />
           </>
         )}
       </div>
