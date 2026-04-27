@@ -37,13 +37,15 @@ const STEPS = [
   { n: '03', title: 'Report & sign off',    desc: 'Generate executive summaries and publish a shareable link for stakeholder review.' },
 ]
 
+const industryIconStyle = { fontSize: 16, color: 'var(--sp-blue-500)' }
+
 const INDUSTRIES = [
-  { icon: BuildingRegular,  name: 'Mining & Resources' },
-  { icon: BriefcaseRegular, name: 'Construction' },
-  { icon: ClipboardRegular, name: 'Healthcare' },
-  { icon: GridRegular,      name: 'Manufacturing' },
-  { icon: DocumentRegular,  name: 'Aviation' },
-  { icon: ShieldRegular,    name: 'Legal & Fiduciary' },
+  { icon: <BuildingRegular style={industryIconStyle} />,  name: 'Mining & Resources' },
+  { icon: <BriefcaseRegular style={industryIconStyle} />, name: 'Construction' },
+  { icon: <ClipboardRegular style={industryIconStyle} />, name: 'Healthcare' },
+  { icon: <GridRegular style={industryIconStyle} />,      name: 'Manufacturing' },
+  { icon: <DocumentRegular style={industryIconStyle} />,  name: 'Aviation' },
+  { icon: <ShieldRegular style={industryIconStyle} />,    name: 'Legal & Fiduciary' },
 ]
 
 const GUIDE_CARDS = [
@@ -248,27 +250,40 @@ export default function LandingPage() {
           Built for regulated, project-intensive industries
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
-          {INDUSTRIES.map(({ icon: Icon, name }) => (
+          {INDUSTRIES.map(({ icon, name }) => (
             <div key={name} className="card-lift" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--sp-radius-pill)', border: '1.5px solid var(--sp-border-subtle)', backgroundColor: 'var(--sp-surface)', fontSize: 13, fontWeight: 700, boxShadow: 'var(--sp-shadow-1)' }}>
-              <Icon style={{ fontSize: 16, color: 'var(--sp-blue-500)' }} />{name}
+              {icon}{name}
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Photo strip ── */}
-      <div style={{ padding: '0 40px 64px', maxWidth: 1140, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 14 }}>
-        {[
-          { src: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&q=80', label: 'Mining commissioning' },
-          { src: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600&q=80', label: 'Plant operations' },
-          { src: 'https://images.unsplash.com/photo-1565008447742-97f6f38c985c?w=600&q=80', label: 'Infrastructure handover' },
-        ].map(({ src, label }) => (
-          <div key={label} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '4/3' }}>
-            <Image src={src} alt={label} fill style={{ objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg,rgba(13,27,42,0.5) 0%,transparent 55%)' }} />
-            <div style={{ position: 'absolute', bottom: 12, left: 14, fontSize: 12, fontWeight: 600, color: '#fff' }}>{label}</div>
+      {/* ── Product screenshot ── */}
+      <div style={{ padding: '0 40px 64px', maxWidth: 1140, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <Badge appearance="outline" color="brand" size="large" style={{ marginBottom: 12 }}>DELIVERABLES</Badge>
+          <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.2 }}>See the readiness plan as a working control room</div>
+          <div style={{ fontSize: 15, color: 'var(--sp-gray-600)', margin: '10px auto 0', maxWidth: 560, lineHeight: 1.6 }}>
+            Track scope, ownership, progress, dates, priorities, and RAID exposure in one project view.
           </div>
-        ))}
+        </div>
+        <div style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 'var(--sp-radius-lg)',
+          border: '1px solid var(--sp-border-subtle)',
+          boxShadow: 'var(--sp-shadow-4)',
+          aspectRatio: '2048 / 1114',
+          backgroundColor: 'var(--sp-surface-2)',
+        }}>
+          <Image
+            src="/landing-screens/deliverables-grid.png"
+            alt="S-Planned deliverables grid showing project tasks, owners, progress, priorities, RAID links, and dates"
+            fill
+            sizes="(max-width: 1140px) 100vw, 1140px"
+            style={{ objectFit: 'cover' }}
+          />
+        </div>
       </div>
 
       {/* ── CTA ── */}

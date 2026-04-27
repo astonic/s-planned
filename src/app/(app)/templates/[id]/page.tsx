@@ -24,6 +24,7 @@ export default async function TemplateDetailPage({ params }: Props) {
             orderBy: { order: 'asc' },
             include: {
               deliverables: {
+                orderBy: [{ order: 'asc' }, { code: 'asc' }],
                 include: { acceptanceCriteria: true, evidenceRequirements: true },
               },
             },

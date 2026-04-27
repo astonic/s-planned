@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
+import type { DragEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   makeStyles,
@@ -21,12 +22,14 @@ import {
   DocumentRegular,
   ChevronDownRegular,
   ChevronRightRegular,
+  ReOrderDotsVerticalRegular,
 } from '@fluentui/react-icons'
 import {
   updateSubSection,
   deleteSubSection,
   addDeliverableTemplate,
   deleteDeliverableTemplate,
+  reorderDeliverableTemplates,
 } from '@/lib/actions/templates'
 import type { SubSection, DeliverableTemplate } from '@/types/templates'
 import { DeliverableTemplateDrawer } from './DeliverableTemplateDrawer'
@@ -87,6 +90,21 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke3}`,
     borderRadius: tokens.borderRadiusSmall,
   },
+  deliverableItemDragging: {
+    opacity: 0.55,
+    border: `1px solid ${tokens.colorBrandStroke1}`,
+    backgroundColor: tokens.colorBrandBackground2,
+  },
+  dragHandle: {
+    color: tokens.colorNeutralForeground3,
+    cursor: 'grab',
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
+    ':active': {
+      cursor: 'grabbing',
+    },
+  },
   deliverableCode: {
     fontFamily: 'monospace',
     fontSize: tokens.fontSizeBase100,
@@ -127,6 +145,11 @@ const useStyles = makeStyles({
     display: 'block',
     marginBottom: tokens.spacingVerticalXS,
   },
+  reorderError: {
+    color: tokens.colorStatusDangerForeground1,
+    fontSize: tokens.fontSizeBase200,
+    marginBottom: tokens.spacingVerticalXS,
+  },
 })
 
 interface Props {
@@ -155,6 +178,13 @@ export function SubSectionRow({ subSection, templateId }: Props) {
   const [addDTError, setAddDTError] = useState<string | null>(null)
 
   const [selectedDeliverable, setSelectedDeliverable] = useState<DeliverableTemplate | null>(null)
+  const [orderedDeliverables, setOrderedDeliverables] = useState(subSection.deliverables)
+  const [draggingDeliverableId, setDraggingDeliverableId] = useState<string | null>(null)
+  const [reorderError, setReorderError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setOrderedDeliverables(subSection.deliverables)
+  }, [subSection.deliverables])
 
   function handleSaveEdit() {
     if (!editCode.trim() || !editName.trim()) return
@@ -215,6 +245,47 @@ export function SubSectionRow({ subSection, templateId }: Props) {
     startTransition(async () => {
       await deleteDeliverableTemplate(deliverableId)
       router.refresh()
+    })
+  }
+
+  function reorderLocalDeliverables(draggedId: string, targetId: string, insertAfter: boolean) {
+    const dragged = orderedDeliverables.find((deliverable) => deliverable.id === draggedId)
+    if (!dragged || draggedId === targetId) return orderedDeliverables
+
+    const withoutDragged = orderedDeliverables.filter((deliverable) => deliverable.id !== draggedId)
+    const targetIndex = withoutDragged.findIndex((deliverable) => deliverable.id === targetId)
+    if (targetIndex < 0) return orderedDeliverables
+
+    const insertIndex = targetIndex + (insertAfter ? 1 : 0)
+    const next = [...withoutDragged]
+    next.splice(insertIndex, 0, dragged)
+    return next
+  }
+
+  function handleDropDeliverable(event: DragEvent<HTMLDivElement>, targetId: string) {
+    event.preventDefault()
+    if (!draggingDeliverableId) return
+
+    const targetRect = event.currentTarget.getBoundingClientRect()
+    const insertAfter = event.clientY > targetRect.top + targetRect.height / 2
+    const previous = orderedDeliverables
+    const next = reorderLocalDeliverables(draggingDeliverableId, targetId, insertAfter)
+    if (next === previous) {
+      setDraggingDeliverableId(null)
+      return
+    }
+
+    setReorderError(null)
+    setOrderedDeliverables(next)
+    setDraggingDeliverableId(null)
+    startTransition(async () => {
+      const result = await reorderDeliverableTemplates(subSection.id, next.map((deliverable) => deliverable.id))
+      if (result.ok) {
+        router.refresh()
+      } else {
+        setOrderedDeliverables(previous)
+        setReorderError(result.error)
+      }
     })
   }
 
@@ -327,8 +398,27 @@ export function SubSectionRow({ subSection, templateId }: Props) {
               <span className={styles.emptyText}>No deliverable templates yet.</span>
             ) : (
               <div className={styles.deliverableList}>
-                {subSection.deliverables.map((dt) => (
-                  <div key={dt.id} className={styles.deliverableItem}>
+                {reorderError && <span className={styles.reorderError}>{reorderError}</span>}
+                {orderedDeliverables.map((dt) => (
+                  <div
+                    key={dt.id}
+                    className={`${styles.deliverableItem} ${draggingDeliverableId === dt.id ? styles.deliverableItemDragging : ''}`}
+                    draggable={!isPending}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData('text/plain', dt.id)
+                      setDraggingDeliverableId(dt.id)
+                    }}
+                    onDragEnd={() => setDraggingDeliverableId(null)}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = 'move'
+                    }}
+                    onDrop={(event) => handleDropDeliverable(event, dt.id)}
+                  >
+                    <span className={styles.dragHandle} aria-label="Drag to reorder deliverable">
+                      <ReOrderDotsVerticalRegular fontSize={16} />
+                    </span>
                     <DocumentRegular
                       fontSize={14}
                       style={{ color: tokens.colorNeutralForeground3, flexShrink: 0 }}

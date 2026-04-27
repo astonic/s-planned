@@ -27,7 +27,7 @@ export default async function TemplateEditPage({ params }: Props) {
               orderBy: { order: 'asc' },
               include: {
                 deliverables: {
-                  orderBy: { id: 'asc' },
+                  orderBy: [{ order: 'asc' }, { code: 'asc' }],
                   include: {
                     acceptanceCriteria: true,
                     evidenceRequirements: true,
@@ -68,6 +68,7 @@ export default async function TemplateEditPage({ params }: Props) {
           phase: dt.phase ?? null,
           domain: dt.domain ?? null,
           estimatedDuration: dt.estimatedDuration ?? null,
+          order: dt.order,
           acceptanceCriteria: dt.acceptanceCriteria.map((ac) => ({
             id: ac.id,
             description: ac.description,

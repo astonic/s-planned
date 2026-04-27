@@ -306,6 +306,7 @@ model DeliverableTemplate {
   phase             String?
   domain            String?
   estimatedDuration Int?
+  order             Int      @default(0)
 
   subSection          SubSection            @relation(fields: [subSectionId], references: [id], onDelete: Cascade)
   acceptanceCriteria  AcceptanceCriteria[]

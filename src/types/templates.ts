@@ -22,6 +22,7 @@ export interface DeliverableTemplate {
   phase: string | null
   domain: string | null
   estimatedDuration: number | null
+  order: number
   acceptanceCriteria: AcceptanceCriteriaItem[]
   evidenceRequirements: EvidenceRequirementItem[]
 }

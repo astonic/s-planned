@@ -195,6 +195,7 @@ const useStyles = makeStyles({
     },
   },
   changesHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  changesFilters: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   changeList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS, overflowY: 'auto', maxHeight: 'calc(100vh - 260px)', paddingRight: tokens.spacingHorizontalXS },
   changeCard: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -398,7 +399,7 @@ interface Props {
   deliverableNotes: NoteItem[]
 }
 
-type DetailTab = 'details' | 'checklist' | 'evidence' | 'notes' | 'activity' | 'raid'
+type DetailTab = 'details' | 'checklist' | 'evidence' | 'notes' | 'raid'
 
 function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliverableId: string }) {
   const router = useRouter()
@@ -600,10 +601,6 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
           <Tab value="notes">
             Notes
             {deliverableNotes.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{deliverableNotes.length}</Badge>}
-          </Tab>
-          <Tab value="activity">
-            Activity
-            {activityItems.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{activityItems.length}</Badge>}
           </Tab>
           <Tab value="raid">
             RAID
@@ -883,97 +880,6 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
             <NotesTab deliverableId={deliverable.id} initialNotes={deliverableNotes} />
           </div>
         )}
-        {activeTab === 'activity' && (
-          <div className={styles.tabContent}>
-            {activityItems.length === 0 && !activityPending ? (
-              <Text className={styles.activityPlaceholder}>No audit events yet for this deliverable.</Text>
-            ) : (
-              <>
-                <div className={styles.activityFilters}>
-                  <Input
-                    className={styles.activitySearch}
-                    placeholder="Search activity"
-                    value={activityQuery}
-                    onChange={(_, data) => setActivityQuery(data.value)}
-                  />
-                  <Select
-                    value={activityType}
-                    onChange={(_, data) => setActivityType(data.value)}
-                  >
-                    <option value="all">All Event Types</option>
-                    {activityTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {activityError && (
-                  <div className={styles.activityError}>
-                    <Text size={200}>{activityError}</Text>
-                    <Button
-                      size="small"
-                      appearance="subtle"
-                      onClick={() => {
-                        startActivityTransition(async () => {
-                          await refreshActivity(true)
-                        })
-                      }}
-                    >
-                      Retry
-                    </Button>
-                  </div>
-                )}
-
-                {activityPending && (
-                  <Text className={styles.activityPlaceholder}>Loading activity…</Text>
-                )}
-
-                {!activityPending && !activityError && !activityError && activityItems.length === 0 ? (
-                  <Text className={styles.activityPlaceholder}>No activity matches the current filters.</Text>
-                ) : (
-                  <div className={styles.activityList}>
-                    {activityItems.map((event) => (
-                      <div key={event.id} className={styles.activityRow}>
-                        <div className={styles.activityMeta}>
-                          <Text size={200}>{event.actorName}</Text>
-                          <Text size={200}>
-                            {new Date(event.createdAt).toLocaleString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </Text>
-                        </div>
-                        <Text weight="semibold">{event.description}</Text>
-                        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                          {event.eventType}
-                        </Text>
-                      </div>
-                    ))}
-                    {activityHasMore && !activityPending && (
-                      <div className={styles.activityLoadMore}>
-                        <Button
-                          appearance="subtle"
-                          onClick={() => {
-                            startActivityTransition(async () => {
-                              await refreshActivity(false)
-                            })
-                          }}
-                        >
-                          Load more
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
         {activeTab === 'raid' && (
           <div className={styles.tabContent}>
             <div className={styles.raidHeader}>
@@ -1007,6 +913,24 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
           <Text size={300} weight="semibold">Changes</Text>
           {activityPending && <Spinner size="tiny" />}
         </div>
+        <div className={styles.changesFilters}>
+          <Input
+            placeholder="Search changes"
+            value={activityQuery}
+            onChange={(_, data) => setActivityQuery(data.value)}
+          />
+          <Select
+            value={activityType}
+            onChange={(_, data) => setActivityType(data.value)}
+          >
+            <option value="all">All Event Types</option>
+            {activityTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </Select>
+        </div>
         {activityError && (
           <div className={styles.activityError}>
             <Text size={200}>{activityError}</Text>
@@ -1024,10 +948,14 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
           </div>
         )}
         <div className={styles.changeList}>
-          {activityItems.slice(0, 10).length === 0 && !activityPending ? (
-            <Text className={styles.activityPlaceholder}>No changes yet.</Text>
+          {activityPending && activityItems.length === 0 ? (
+            <Text className={styles.activityPlaceholder}>Loading changes...</Text>
+          ) : activityItems.length === 0 && !activityPending ? (
+            <Text className={styles.activityPlaceholder}>
+              {activityQuery || activityType !== 'all' ? 'No changes match the current filters.' : 'No changes yet.'}
+            </Text>
           ) : (
-            activityItems.slice(0, 10).map((event) => (
+            activityItems.map((event) => (
               <div key={event.id} className={styles.changeCard}>
                 <div className={styles.changeMeta}>
                   <div className={styles.compactAvatarRow}>

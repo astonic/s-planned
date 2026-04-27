@@ -278,13 +278,14 @@ export async function importTemplateFromExcel(
                   name: ss.name,
                   order: ss.order,
                   deliverables: {
-                    create: ss.deliverables.map((deliverable) => ({
+                    create: ss.deliverables.map((deliverable, deliverableIndex) => ({
                       code: deliverable.code,
                       name: deliverable.name,
                       description: deliverable.description,
                       phase: deliverable.phase,
                       domain: deliverable.domain,
                       estimatedDuration: deliverable.estimatedDuration,
+                      order: deliverableIndex,
                       acceptanceCriteria: deliverable.acceptanceCriteria.length
                         ? { create: deliverable.acceptanceCriteria }
                         : undefined,
@@ -379,6 +380,7 @@ export async function cloneTemplate(id: string): Promise<ActionResult<{ id: stri
               subSections: {
                 include: {
                   deliverables: {
+                    orderBy: [{ order: 'asc' }, { code: 'asc' }],
                     include: { acceptanceCriteria: true, evidenceRequirements: true },
                   },
                 },
@@ -410,13 +412,14 @@ export async function cloneTemplate(id: string): Promise<ActionResult<{ id: stri
                   name: ss.name,
                   order: ss.order,
                   deliverables: {
-                    create: ss.deliverables.map((d) => ({
+                    create: ss.deliverables.map((d, deliverableIndex) => ({
                       code: d.code,
                       name: d.name,
                       description: d.description,
                       phase: d.phase,
                       domain: d.domain,
                       estimatedDuration: d.estimatedDuration,
+                      order: d.order ?? deliverableIndex,
                       acceptanceCriteria: {
                         create: d.acceptanceCriteria.map((ac) => ({
                           description: ac.description,
@@ -586,7 +589,8 @@ export async function addDeliverableTemplate(
     const orgId = auth.orgId
 
     await withTenant(orgId, async (tx) => {
-      await tx.deliverableTemplate.create({ data: { subSectionId, ...data } })
+      const count = await tx.deliverableTemplate.count({ where: { subSectionId } })
+      await tx.deliverableTemplate.create({ data: { subSectionId, ...data, order: count } })
     })
 
     return { ok: true, data: undefined }
@@ -612,6 +616,49 @@ export async function updateDeliverableTemplate(
 
     await withTenant(orgId, async (tx) => {
       await tx.deliverableTemplate.update({ where: { id }, data })
+    })
+
+    return { ok: true, data: undefined }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+export async function reorderDeliverableTemplates(
+  subSectionId: string,
+  deliverableIds: string[],
+): Promise<ActionResult> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+
+    await withTenant(orgId, async (tx) => {
+      const subSection = await tx.subSection.findUnique({
+        where: { id: subSectionId },
+        include: {
+          focusArea: { include: { template: { select: { id: true, organizationId: true } } } },
+          deliverables: { select: { id: true } },
+        },
+      })
+
+      if (!subSection || subSection.focusArea.template.organizationId !== orgId) {
+        throw new Error('Sub-section not found')
+      }
+
+      const existingIds = new Set(subSection.deliverables.map((deliverable) => deliverable.id))
+      const uniqueIds = Array.from(new Set(deliverableIds))
+      if (uniqueIds.length !== existingIds.size || uniqueIds.some((id) => !existingIds.has(id))) {
+        throw new Error('Deliverable order does not match this sub-section.')
+      }
+
+      for (let index = 0; index < uniqueIds.length; index += 1) {
+        await tx.deliverableTemplate.update({
+          where: { id: uniqueIds[index] },
+          data: { order: index },
+        })
+      }
+
+      revalidatePath(`/templates/${subSection.focusArea.template.id}/edit`)
     })
 
     return { ok: true, data: undefined }

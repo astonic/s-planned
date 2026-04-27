@@ -1086,7 +1086,8 @@ async function ensureTemplate(orgId: string, templateData: SeedTemplate) {
         },
       })
 
-      for (const deliverable of subSection.deliverables) {
+      for (let deliverableIndex = 0; deliverableIndex < subSection.deliverables.length; deliverableIndex += 1) {
+        const deliverable = subSection.deliverables[deliverableIndex]
         const createdDeliverable = await prisma.deliverableTemplate.create({
           data: {
             subSectionId: createdSubSection.id,
@@ -1096,6 +1097,7 @@ async function ensureTemplate(orgId: string, templateData: SeedTemplate) {
             phase: deliverable.phase,
             domain: deliverable.domain,
             estimatedDuration: deliverable.estimatedDuration,
+            order: deliverableIndex,
             acceptanceCriteria: {
               create: deliverable.checklist.map((description: string) => ({
                 description,
@@ -1201,7 +1203,7 @@ async function ensureProjectFromTemplate(
         include: {
           subSections: {
             orderBy: { order: 'asc' },
-            include: { deliverables: { orderBy: { code: 'asc' } } },
+            include: { deliverables: { orderBy: [{ order: 'asc' }, { code: 'asc' }] } },
           },
         },
       },
