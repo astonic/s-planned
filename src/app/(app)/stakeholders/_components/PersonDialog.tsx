@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -49,7 +50,7 @@ const formSchema = z.object({
   company: z.string().optional(),
   role: z.enum(['owner', 'team', 'end_user']),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone is required'),
   notes: z.string().optional(),
 })
 
@@ -68,6 +69,7 @@ interface PersonDialogProps {
 
 export function PersonDialog({ open, onOpenChange, person, mode }: PersonDialogProps) {
   const styles = useStyles()
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const { register, handleSubmit, control, formState: { errors }, reset } = useForm<FormValues>({
@@ -82,6 +84,18 @@ export function PersonDialog({ open, onOpenChange, person, mode }: PersonDialogP
       notes: person?.notes ?? '',
     },
   })
+
+  useEffect(() => {
+    reset({
+      name: person?.name ?? '',
+      type: (person?.type as FormValues['type']) ?? 'internal',
+      company: person?.company ?? '',
+      role: (person?.role as FormValues['role']) ?? 'team',
+      email: person?.email ?? '',
+      phone: person?.phone ?? '',
+      notes: person?.notes ?? '',
+    })
+  }, [mode, open, person, reset])
 
   function handleClose() {
     reset()
@@ -111,6 +125,7 @@ export function PersonDialog({ open, onOpenChange, person, mode }: PersonDialogP
                 onClick={() => {
                   startTransition(async () => {
                     await deletePerson(person.id)
+                    router.refresh()
                     handleClose()
                   })
                 }}
@@ -131,7 +146,10 @@ export function PersonDialog({ open, onOpenChange, person, mode }: PersonDialogP
         mode === 'create'
           ? await createPerson(values)
           : await updatePerson(person!.id, values)
-      if (result.ok) handleClose()
+      if (result.ok) {
+        router.refresh()
+        handleClose()
+      }
     })
   }
 
@@ -207,7 +225,12 @@ export function PersonDialog({ open, onOpenChange, person, mode }: PersonDialogP
                     <Input {...register('email')} type="email" placeholder="jane@example.com" />
                   </Field>
 
-                  <Field label="Phone">
+                  <Field
+                    label="Phone"
+                    required
+                    validationState={errors.phone ? 'error' : 'none'}
+                    validationMessage={errors.phone?.message}
+                  >
                     <Input {...register('phone')} placeholder="+1 555 000 0000" />
                   </Field>
                 </div>

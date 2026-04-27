@@ -1,12 +1,96 @@
 import { prisma } from '@/lib/db'
 import type { AnalyticsData } from '@/app/(app)/analytics/_components/AnalyticsTabs'
+import type { Prisma } from '@prisma/client'
 
-export async function buildAnalytics(orgId: string, projectId: string): Promise<AnalyticsData> {
-  const projectFilter = projectId !== 'all' ? { projectId } : {}
+function projectIdsForAnalytics(projectId: string, scopedProjectIds?: string[]) {
+  if (projectId !== 'all') return [projectId]
+  return scopedProjectIds
+}
+
+function deliverableProjectWhere(projectIds?: string[]): Prisma.DeliverableExecutionWhereInput {
+  return projectIds
+    ? { subSectionExecution: { focusAreaExecution: { projectId: { in: projectIds } } } }
+    : {}
+}
+
+function auditProjectWhere(projectIds?: string[]): Prisma.AuditEventWhereInput {
+  return projectIds ? { projectId: { in: projectIds } } : {}
+}
+
+function raidProjectWhere(projectIds?: string[]): Prisma.RAIDItemWhereInput {
+  return projectIds ? { projectId: { in: projectIds } } : {}
+}
+
+function personProjectWhere(projectIds?: string[]): Prisma.PersonWhereInput {
+  return projectIds
+    ? {
+        OR: [
+          {
+            deliverableLinks: {
+              some: {
+                deliverableExecution: {
+                  subSectionExecution: { focusAreaExecution: { projectId: { in: projectIds } } },
+                },
+              },
+            },
+          },
+          {
+            ownedDeliverables: {
+              some: {
+                subSectionExecution: { focusAreaExecution: { projectId: { in: projectIds } } },
+              },
+            },
+          },
+        ],
+      }
+    : {}
+}
+
+function vendorProjectWhere(projectIds?: string[]): Prisma.VendorWhereInput {
+  return projectIds
+    ? {
+        deliverableLinks: {
+          some: {
+            deliverableExecution: {
+              subSectionExecution: { focusAreaExecution: { projectId: { in: projectIds } } },
+            },
+          },
+        },
+      }
+    : {}
+}
+
+function emptyAnalytics(): AnalyticsData {
+  return {
+    readiness: {
+      overallPct: 0,
+      totalDeliverables: 0,
+      closedDeliverables: 0,
+      byFocusArea: [],
+      byPhase: [
+        { phase: 'pre_commissioning', label: 'pre_commissioning', total: 0, closed: 0, pct: 0 },
+        { phase: 'commissioning', label: 'commissioning', total: 0, closed: 0, pct: 0 },
+        { phase: 'ramp_up', label: 'ramp_up', total: 0, closed: 0, pct: 0 },
+        { phase: 'handover', label: 'handover', total: 0, closed: 0, pct: 0 },
+      ],
+    },
+    deliverables: { byStatus: [], byFocusArea: [], trend: [], totalOverdue: 0, totalDelayed: 0 },
+    raid: { byType: [], bySeverity: [], byStatus: [], openCount: 0, criticalOpenCount: 0, overdueCount: 0 },
+    team: { byPersonType: [], byVendorType: [], topPeople: [], totalPeople: 0, totalVendors: 0 },
+  }
+}
+
+export async function buildAnalytics(orgId: string, projectId: string, scopedProjectIds?: string[]): Promise<AnalyticsData> {
+  const projectIds = projectIdsForAnalytics(projectId, scopedProjectIds)
+  if (projectIds && projectIds.length === 0) return emptyAnalytics()
+
+  const deliverableFilter = deliverableProjectWhere(projectIds)
+  const auditFilter = auditProjectWhere(projectIds)
+  const raidFilter = raidProjectWhere(projectIds)
   const today = new Date()
 
   const deliverables = await prisma.deliverableExecution.findMany({
-    where: { organizationId: orgId, ...projectFilter },
+    where: { organizationId: orgId, ...deliverableFilter },
     select: {
       id: true,
       status: true,
@@ -67,7 +151,7 @@ export async function buildAnalytics(orgId: string, projectId: string): Promise<
       eventType: 'deliverable.status_changed',
       createdAt: { gte: eightWeeksAgo },
       description: { contains: 'closed' },
-      ...(projectId !== 'all' ? { projectId } : {}),
+      ...auditFilter,
     },
     select: { createdAt: true },
     orderBy: { createdAt: 'asc' },
@@ -83,7 +167,7 @@ export async function buildAnalytics(orgId: string, projectId: string): Promise<
   const trend = Array.from(weekMap.entries()).map(([date, closed]) => ({ date, closed, total: totalDeliverables }))
 
   const raidItems = await prisma.rAIDItem.findMany({
-    where: { organizationId: orgId, ...projectFilter },
+    where: { organizationId: orgId, ...raidFilter },
     select: { type: true, severity: true, status: true, dueDate: true },
   })
 
@@ -106,11 +190,11 @@ export async function buildAnalytics(orgId: string, projectId: string): Promise<
   }
 
   const [people, vendors, actorActivity] = await Promise.all([
-    prisma.person.findMany({ where: { organizationId: orgId }, select: { type: true } }),
-    prisma.vendor.findMany({ where: { organizationId: orgId }, select: { type: true } }),
+    prisma.person.findMany({ where: { organizationId: orgId, ...personProjectWhere(projectIds) }, select: { type: true } }),
+    prisma.vendor.findMany({ where: { organizationId: orgId, ...vendorProjectWhere(projectIds) }, select: { type: true } }),
     prisma.auditEvent.groupBy({
       by: ['actorName'],
-      where: { organizationId: orgId, ...(projectId !== 'all' ? { projectId } : {}) },
+      where: { organizationId: orgId, ...auditFilter },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 10,

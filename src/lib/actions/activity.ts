@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { authOptions } from '@/lib/auth'
 import { withTenant } from '@/lib/tenant-context'
+import { assertProjectAccess } from '@/lib/project-access'
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -50,6 +51,22 @@ export async function getDeliverableActivityPage(
     const parsed = pageSchema.parse(input)
 
     const data = await withTenant(orgId, async (tx) => {
+      const deliverable = await tx.deliverableExecution.findUnique({
+        where: { id: deliverableExecutionId, organizationId: orgId },
+        select: {
+          subSectionExecution: {
+            select: { focusAreaExecution: { select: { projectId: true } } },
+          },
+        },
+      })
+      if (!deliverable) throw new Error('Deliverable not found')
+      await assertProjectAccess({
+        orgId,
+        userId: session.user.id,
+        role: session.role ?? 'viewer',
+        projectId: deliverable.subSectionExecution.focusAreaExecution.projectId,
+      }, tx)
+
       const baseWhere = {
         organizationId: orgId,
         deliverableExecutionId,
@@ -104,6 +121,13 @@ export async function getProjectActivityPage(
     const parsed = pageSchema.parse(input)
 
     const data = await withTenant(orgId, async (tx) => {
+      await assertProjectAccess({
+        orgId,
+        userId: session.user.id,
+        role: session.role ?? 'viewer',
+        projectId,
+      }, tx)
+
       const baseWhere = {
         organizationId: orgId,
         projectId,

@@ -24,7 +24,7 @@ const createPersonSchema = z.object({
   company: z.string().optional(),
   role: personRoleEnum,
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone is required'),
   notes: z.string().optional(),
 })
 
@@ -36,7 +36,7 @@ const createVendorSchema = z.object({
   contactName: z.string().optional(),
   contactRole: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone is required'),
   address: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   notes: z.string().optional(),

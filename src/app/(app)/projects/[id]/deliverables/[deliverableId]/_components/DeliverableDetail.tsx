@@ -54,13 +54,13 @@ import type { NoteItem } from './NotesTab'
 const useStyles = makeStyles({
   layout: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(720px, 1fr) 320px',
+    gridTemplateColumns: 'minmax(860px, 1fr) 360px',
     gap: 0,
     alignItems: 'stretch',
-    maxWidth: '1180px',
+    maxWidth: '1480px',
     margin: '0 auto',
     minHeight: 'calc(100vh - 180px)',
-    '@media (max-width: 1100px)': {
+    '@media (max-width: 1280px)': {
       gridTemplateColumns: '1fr',
       gap: tokens.spacingVerticalL,
     },
@@ -73,8 +73,8 @@ const useStyles = makeStyles({
     borderRight: 'none',
     boxShadow: tokens.shadow16,
     minHeight: '100%',
-    padding: '34px 36px',
-    '@media (max-width: 1100px)': {
+    padding: '40px 48px',
+    '@media (max-width: 1280px)': {
       borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
     },
     '@media (max-width: 720px)': {
@@ -103,10 +103,10 @@ const useStyles = makeStyles({
   compactAvatarRow: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalXS },
   plannerGrid: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1fr) 324px',
+    gridTemplateColumns: 'minmax(0, 1fr) 360px',
     gap: tokens.spacingHorizontalXXL,
     alignItems: 'start',
-    '@media (max-width: 900px)': {
+    '@media (max-width: 1020px)': {
       gridTemplateColumns: '1fr',
     },
   },
@@ -118,7 +118,7 @@ const useStyles = makeStyles({
     minWidth: 0,
     borderLeft: `1px solid ${tokens.colorNeutralStroke2}`,
     paddingLeft: tokens.spacingHorizontalXL,
-    '@media (max-width: 900px)': {
+    '@media (max-width: 1020px)': {
       borderLeft: 'none',
       paddingLeft: 0,
     },
@@ -141,7 +141,7 @@ const useStyles = makeStyles({
   sectionBlock: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS },
   sectionHeaderLine: { display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, justifyContent: 'space-between' },
   progressTrack: { height: '3px', backgroundColor: tokens.colorNeutralStroke2, flex: 1, minWidth: '140px' },
-  progressFill: { height: '100%', backgroundColor: tokens.colorBrandBackground },
+  progressFill: { height: '100%', backgroundColor: 'var(--sp-success)' },
   checklistList: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalXS },
   checklistRow: { display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr)', gap: tokens.spacingHorizontalS, alignItems: 'start' },
   checklistTextDone: { color: tokens.colorNeutralForeground3, textDecoration: 'line-through' },
@@ -190,7 +190,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalM,
     minHeight: '100%',
     overflow: 'hidden',
-    '@media (max-width: 1100px)': {
+    '@media (max-width: 1280px)': {
       minHeight: 'auto',
     },
   },
@@ -391,6 +391,8 @@ interface Props {
   deliverableNotes: NoteItem[]
 }
 
+type DetailTab = 'details' | 'checklist' | 'evidence' | 'notes' | 'activity' | 'raid'
+
 function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliverableId: string }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -407,7 +409,7 @@ function UnlinkButton({ raidItemId, deliverableId }: { raidItemId: string; deliv
 export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRAID, projectRAID, orgPeople, orgVendors, auditEvents, auditEventsHasMore, auditEventTypes, evidenceItems, evidenceRequirements, criteria, deliverableNotes }: Props) {
   const styles = useStyles()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'details' | 'evidence' | 'notes' | 'activity' | 'raid'>('details')
+  const [activeTab, setActiveTab] = useState<DetailTab>('details')
   const [currentStatus, setCurrentStatus] = useState<DeliverableStatus>(deliverable.status)
   const [statusPending, startStatusTransition] = useTransition()
   function handleStatusChange(newStatus: DeliverableStatus) {
@@ -563,16 +565,17 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
           </div>
         </div>
 
-        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'evidence' | 'notes' | 'activity' | 'raid')}>
+        <TabList selectedValue={activeTab} onTabSelect={(_, d) => setActiveTab(d.value as DetailTab)}>
           <Tab value="details">Details</Tab>
-          <Tab value="evidence">
-            Evidence
-            {(detailCriteria.length > 0 || evidenceRequirements.length > 0) && (
+          <Tab value="checklist">
+            Checklist
+            {detailCriteria.length > 0 && (
               <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>
                 {completedCriteria}/{detailCriteria.length}
               </Badge>
             )}
           </Tab>
+          <Tab value="evidence">Evidence</Tab>
           <Tab value="notes">
             Notes
             {deliverableNotes.length > 0 && <Badge appearance="filled" color="informative" size="small" style={{ marginLeft: '6px' }}>{deliverableNotes.length}</Badge>}
@@ -661,41 +664,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
 
               <section className={styles.sectionBlock}>
                 <div className={styles.sectionHeaderLine}>
-                  <Text size={300} weight="semibold">Checklist</Text>
-                  <div className={styles.progressTrack} aria-hidden="true">
-                    <div className={styles.progressFill} style={{ width: `${criteriaPct}%` }} />
-                  </div>
-                  <Text size={200} className={styles.subtleText}>{completedCriteria}/{detailCriteria.length}</Text>
-                </div>
-                {detailCriteria.length === 0 ? (
-                  <Text className={styles.subtleText}>No acceptance criteria configured.</Text>
-                ) : (
-                  <div className={styles.checklistList}>
-                    {detailCriteria.map((item) => (
-                      <div key={item.id} className={styles.checklistRow}>
-                        <Checkbox
-                          checked={Boolean(item.completion?.completed)}
-                          disabled={criteriaPending}
-                          onChange={(_, data) => handleCriteriaToggle(item.id, Boolean(data.checked))}
-                          aria-label={`Mark ${item.description} as complete`}
-                        />
-                        <div>
-                          <Text className={item.completion?.completed ? styles.checklistTextDone : undefined}>
-                            {item.description}
-                          </Text>
-                          {item.verificationMethod && (
-                            <Text block size={200} className={styles.subtleText}>{item.verificationMethod}</Text>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              <section className={styles.sectionBlock}>
-                <div className={styles.sectionHeaderLine}>
-                  <Text size={300} weight="semibold">Conversation</Text>
+                  <Text size={300} weight="semibold">Deliverable Note</Text>
                   <Badge appearance="tint" color="informative">{deliverableNotes.length} notes</Badge>
                 </div>
                 <div className={styles.inlineEditWrap}>
@@ -703,7 +672,7 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                     value={notes.value}
                     onChange={(_, d) => notes.setValue(d.value)}
                     onBlur={(e) => notes.save(e.target.value)}
-                    placeholder="Add internal notes..."
+                    placeholder="Add a deliverable note..."
                     rows={4}
                     className={`${styles.wideControl} ${notes.showSuccess ? styles.successBorder : ''}`}
                   />
@@ -812,6 +781,43 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
                 </div>
               </section>
             </aside>
+          </div>
+        )}
+        {activeTab === 'checklist' && (
+          <div className={styles.tabContent}>
+            <section className={styles.sectionBlock}>
+              <div className={styles.sectionHeaderLine}>
+                <Text size={300} weight="semibold">Checklist</Text>
+                <div className={styles.progressTrack} aria-hidden="true">
+                  <div className={styles.progressFill} style={{ width: `${criteriaPct}%` }} />
+                </div>
+                <Text size={200} className={styles.subtleText}>{completedCriteria}/{detailCriteria.length}</Text>
+              </div>
+              {detailCriteria.length === 0 ? (
+                <Text className={styles.subtleText}>No acceptance criteria configured.</Text>
+              ) : (
+                <div className={styles.checklistList}>
+                  {detailCriteria.map((item) => (
+                    <div key={item.id} className={styles.checklistRow}>
+                      <Checkbox
+                        checked={Boolean(item.completion?.completed)}
+                        disabled={criteriaPending}
+                        onChange={(_, data) => handleCriteriaToggle(item.id, Boolean(data.checked))}
+                        aria-label={`Mark ${item.description} as complete`}
+                      />
+                      <div>
+                        <Text className={item.completion?.completed ? styles.checklistTextDone : undefined}>
+                          {item.description}
+                        </Text>
+                        {item.verificationMethod && (
+                          <Text block size={200} className={styles.subtleText}>{item.verificationMethod}</Text>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         )}
         {activeTab === 'evidence' && (

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
+import { assertProjectAccess } from '@/lib/project-access'
 import type { RAIDType, RAIDSeverity, RAIDLikelihood, RAIDStatus } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ export async function createRAIDItem(
         select: { id: true, name: true },
       })
       if (!project) throw new Error('Project not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: parsed.projectId }, tx)
 
       const raidItem = await tx.rAIDItem.create({
         data: {
@@ -115,6 +117,7 @@ export async function updateRAIDItem(
         select: { title: true, projectId: true },
       })
       if (!existing) throw new Error('RAID item not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: existing.projectId }, tx)
 
       const closedAt =
         (parsed.status as string | undefined) === 'closed' ? new Date() :
@@ -164,6 +167,7 @@ export async function deleteRAIDItem(id: string): Promise<ActionResult> {
         select: { title: true, projectId: true },
       })
       if (!existing) throw new Error('RAID item not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: existing.projectId }, tx)
 
       await tx.auditEvent.create({
         data: {
@@ -204,6 +208,7 @@ export async function linkRAIDToDeliverable(
         select: { projectId: true, title: true },
       })
       if (!raidItem) throw new Error('RAID item not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: raidItem.projectId }, tx)
 
       await tx.rAIDItemDeliverable.upsert({
         where: {
@@ -249,6 +254,7 @@ export async function unlinkRAIDFromDeliverable(
         select: { projectId: true, title: true },
       })
       if (!raidItem) throw new Error('RAID item not found')
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: raidItem.projectId }, tx)
 
       await tx.rAIDItemDeliverable.delete({
         where: {

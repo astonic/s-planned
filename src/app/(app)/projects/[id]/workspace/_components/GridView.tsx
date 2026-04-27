@@ -104,12 +104,12 @@ const useStyles = makeStyles({
   ownerName: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   progressCell: { display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '10px' },
   progressTrack: { flex: 1, height: '8px', backgroundColor: tokens.colorNeutralStroke2, borderRadius: '100px', overflow: 'hidden', minWidth: '40px' },
-  progressFill: { height: '100%', backgroundColor: '#5B0E91' },
-  progressFillComplete: { backgroundColor: '#107C10' },
+  progressFill: { height: '100%', backgroundColor: 'var(--sp-success)' },
+  progressFillComplete: { backgroundColor: 'var(--sp-success-dark)' },
   progressLabel: { flexShrink: 0, width: '30px', textAlign: 'right', fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground2 },
   priorityCell: { display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' },
   pipImportant: { flexShrink: 0, width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#C4314B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700 },
-  pipMedium: { flexShrink: 0, width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6264A7' },
+  pipMedium: { flexShrink: 0, width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--sp-success)' },
   pipLow: { flexShrink: 0, color: '#0F6CBD', fontSize: '14px', fontWeight: 700, display: 'flex', alignItems: 'center' },
   startCell: { backgroundColor: '#DDEEC8', color: '#256029', fontWeight: tokens.fontWeightSemibold, display: 'flex', alignItems: 'center', padding: '0 8px' },
   finishCell: { display: 'flex', alignItems: 'center', padding: '0 8px', color: tokens.colorNeutralForeground2, fontWeight: tokens.fontWeightSemibold },
@@ -189,9 +189,9 @@ function buildRows(focusAreas: FocusAreaWithAll[], query: string, sortKey: SortK
 
 function StatusIcon({ status, kind }: { status?: DeliverableStatus; kind: Row['kind'] }) {
   if (kind !== 'deliverable') return <CircleRegular style={{ color: tokens.colorNeutralForeground3, fontSize: 16 }} />
-  if (status === 'closed') return <CheckmarkCircleFilled style={{ color: '#6264A7', fontSize: 16 }} />
+  if (status === 'closed') return <CheckmarkCircleFilled style={{ color: 'var(--sp-success-dark)', fontSize: 16 }} />
   if (status === 'delayed') return <ErrorCircleFilled style={{ color: '#C4314B', fontSize: 16 }} />
-  if (status === 'in_progress') return <RecordRegular style={{ color: '#5B0E91', fontSize: 16 }} />
+  if (status === 'in_progress') return <RecordRegular style={{ color: 'var(--sp-success)', fontSize: 16 }} />
   return <CircleRegular style={{ color: tokens.colorNeutralForeground3, fontSize: 16 }} />
 }
 

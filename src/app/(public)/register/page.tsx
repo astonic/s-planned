@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Card,
   Field,
@@ -43,9 +44,18 @@ const useStyles = makeStyles({
     padding: tokens.spacingHorizontalXXL,
   },
   logo: {
-    fontSize: '28px',
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorBrandForeground1,
+    display: 'block',
+    width: '160px',
+    height: 'auto',
+  },
+  logoChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 'var(--sp-radius-md)',
+    padding: '6px 10px',
+    boxShadow: 'var(--sp-shadow-1)',
     marginBottom: tokens.spacingVerticalXXL,
   },
   card: { width: '100%', maxWidth: '420px' },
@@ -101,7 +111,9 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.page}>
-      <Text className={styles.logo}>S-Planned</Text>
+      <Link href="/landing" className={styles.logoChip} aria-label="S-Planned home">
+        <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority className={styles.logo} />
+      </Link>
 
       <Card className={styles.card}>
         <form onSubmit={form.handleSubmit(onSubmit)} className={styles.form}>

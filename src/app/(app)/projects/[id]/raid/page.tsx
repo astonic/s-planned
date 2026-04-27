@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { RAIDLogView } from './_components/RAIDLogView'
 import type { RAIDSeverity } from '@prisma/client'
 import type { RAIDItemWithCount } from './_components/RAIDLogView'
+import { projectAccessWhere } from '@/lib/project-access'
 
 interface Props {
   params: { id: string }
@@ -16,13 +17,18 @@ export default async function RAIDLogPage({ params }: Props) {
   if (!session?.currentOrganizationId) notFound()
 
   const organizationId = session.currentOrganizationId
+  const projectWhere = projectAccessWhere({
+    orgId: organizationId,
+    userId: session.user.id,
+    role: session.role ?? 'viewer',
+  })
 
-  const project = await prisma.project.findUnique({
-    where: { id: params.id },
+  const project = await prisma.project.findFirst({
+    where: { ...projectWhere, id: params.id },
     select: { id: true, name: true, organizationId: true },
   })
 
-  if (!project || project.organizationId !== organizationId) notFound()
+  if (!project) notFound()
 
   // Fetch all RAID items ordered: critical first, then by createdAt desc
   const rawItems = await prisma.rAIDItem.findMany({

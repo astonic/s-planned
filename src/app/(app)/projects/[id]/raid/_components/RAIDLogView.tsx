@@ -1,20 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import {
   makeStyles,
   tokens,
   Button,
   Badge,
   Text,
-  DataGrid,
-  DataGridHeader,
-  DataGridHeaderCell,
-  DataGridBody,
-  DataGridRow,
-  DataGridCell,
-  createTableColumn,
-  type TableColumnDefinition,
   Dialog,
   DialogTrigger,
   DialogSurface,
@@ -28,6 +20,8 @@ import {
 } from '@fluentui/react-components'
 import {
   AddRegular,
+  ArrowSortDownRegular,
+  ArrowSortUpRegular,
   EditRegular,
   DeleteRegular,
   WarningRegular,
@@ -105,18 +99,87 @@ const useStyles = makeStyles({
   gridWrap: {
     border: `1px solid ${tokens.colorNeutralStroke2}`,
     borderRadius: tokens.borderRadiusMedium,
-    overflow: 'hidden',
+    overflow: 'auto',
     backgroundColor: tokens.colorNeutralBackground1,
+  },
+  table: { minWidth: '860px', width: '100%' },
+  headerRow: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(240px, 1fr) 110px 100px 110px 140px 110px 68px 76px',
+    height: '36px',
+    alignItems: 'center',
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    position: 'sticky' as const,
+    top: 0,
+    zIndex: 1,
+  },
+  hCell: {
+    padding: '0 8px',
+    display: 'flex',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  sortBtn: {
+    justifyContent: 'flex-start',
+    minWidth: 'auto',
+    padding: '0 4px',
+    height: '28px',
+    color: tokens.colorNeutralForeground3,
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase200,
+    borderRadius: tokens.borderRadiusSmall,
+    gap: '4px',
+  },
+  sortBtnActive: { color: tokens.colorBrandForeground1 },
+  dataRow: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(240px, 1fr) 110px 100px 110px 140px 110px 68px 76px',
+    minHeight: '44px',
+    alignItems: 'center',
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    ':hover': { backgroundColor: tokens.colorNeutralBackground1Hover },
+    ':last-child': { borderBottom: 'none' },
+  },
+  cell: {
+    padding: '8px',
+    overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  titleCell: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    padding: '8px',
+    overflow: 'hidden',
+    minWidth: 0,
+    alignItems: 'flex-start',
+  },
+  titleText: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%',
+  },
+  descText: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%',
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase100,
+  },
+  actionCell: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalXS,
+    padding: '0 4px',
   },
   empty: {
     padding: `${tokens.spacingVerticalXL} ${tokens.spacingHorizontalL}`,
     textAlign: 'center' as const,
     color: tokens.colorNeutralForeground3,
     fontStyle: 'italic',
-  },
-  actionCell: {
-    display: 'flex',
-    gap: tokens.spacingHorizontalXS,
   },
 })
 
@@ -164,6 +227,11 @@ const STATUS_LABELS: Record<RAIDStatus, string> = {
 
 type TypeFilter = 'all' | RAIDType
 type StatusFilter = 'all' | RAIDStatus
+type SortKey = 'title' | 'type' | 'severity' | 'status' | 'owner' | 'dueDate'
+type SortDir = 'asc' | 'desc'
+
+const SEVERITY_ORDER: Record<RAIDSeverity, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+const STATUS_ORDER: Record<RAIDStatus, number> = { open: 0, in_progress: 1, closed: 2 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -285,19 +353,42 @@ interface Props {
   projectId: string
   items: RAIDItemWithCount[]
   stats: StatsProps
+  initialTypeFilter?: TypeFilter
 }
 
-export function RAIDLogView({ projectId, items, stats }: Props) {
+export function RAIDLogView({ projectId, items, stats, initialTypeFilter = 'all' }: Props) {
   const styles = useStyles()
 
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>(initialTypeFilter)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('severity')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [editingItem, setEditingItem] = useState<RAIDItemWithCount | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set())
 
-  const filteredItems = items.filter((item) => {
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+  }
+
+  useEffect(() => {
+    setTypeFilter(initialTypeFilter)
+  }, [initialTypeFilter])
+
+  const dir = sortDir === 'asc' ? 1 : -1
+  const sortedItems = [...items].sort((a, b) => {
+    if (sortKey === 'title')    return a.title.localeCompare(b.title) * dir
+    if (sortKey === 'type')     return a.type.localeCompare(b.type) * dir
+    if (sortKey === 'severity') return (SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]) * dir
+    if (sortKey === 'status')   return (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) * dir
+    if (sortKey === 'owner')    return ((a.owner ?? '').localeCompare(b.owner ?? '')) * dir
+    if (sortKey === 'dueDate')  return ((a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0)) * dir
+    return 0
+  })
+
+  const filteredItems = sortedItems.filter((item) => {
     const q = search.trim().toLowerCase()
     if (deletedIds.has(item.id)) return false
     if (typeFilter !== 'all' && item.type !== typeFilter) return false
@@ -310,121 +401,6 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
     }
     return true
   })
-
-  const columns: TableColumnDefinition<RAIDItemWithCount>[] = [
-    createTableColumn({
-      columnId: 'title',
-      compare: (a, b) => a.title.localeCompare(b.title),
-      renderHeaderCell: () => 'Title',
-      renderCell: (item) => (
-        <div>
-          <Text size={300} weight={item.severity === 'critical' ? 'semibold' : 'regular'} block>
-            {item.title}
-          </Text>
-          {item.description && (
-            <Text
-              size={200}
-              style={{
-                color: tokens.colorNeutralForeground3,
-                display: 'block',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '380px',
-              }}
-            >
-              {item.description}
-            </Text>
-          )}
-        </div>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'type',
-      compare: (a, b) => a.type.localeCompare(b.type),
-      renderHeaderCell: () => 'Type',
-      renderCell: (item) => (
-        <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
-          {TYPE_LABELS[item.type]}
-        </Badge>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'severity',
-      compare: (a, b) => a.severity.localeCompare(b.severity),
-      renderHeaderCell: () => 'Severity',
-      renderCell: (item) => (
-        <Badge appearance="tint" color={SEVERITY_COLORS[item.severity]} size="small">
-          {SEVERITY_LABELS[item.severity]}
-        </Badge>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'status',
-      compare: (a, b) => a.status.localeCompare(b.status),
-      renderHeaderCell: () => 'Status',
-      renderCell: (item) => (
-        <Badge appearance="tint" color={STATUS_COLORS[item.status]} size="small">
-          {STATUS_LABELS[item.status]}
-        </Badge>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'owner',
-      compare: (a, b) => (a.owner ?? '').localeCompare(b.owner ?? ''),
-      renderHeaderCell: () => 'Owner',
-      renderCell: (item) => (
-        <Text size={200} style={{ color: item.owner ? undefined : tokens.colorNeutralForeground3 }}>
-          {item.owner ?? '—'}
-        </Text>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'dueDate',
-      compare: (a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0),
-      renderHeaderCell: () => 'Due Date',
-      renderCell: (item) => (
-        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-          {item.dueDate
-            ? new Date(item.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-            : '—'}
-        </Text>
-      ),
-    }),
-    createTableColumn({
-      columnId: 'linked',
-      compare: (a, b) => a._count.deliverables - b._count.deliverables,
-      renderHeaderCell: () => 'Linked',
-      renderCell: (item) =>
-        item._count.deliverables > 0 ? (
-          <Badge appearance="tint" color="informative" size="small">
-            {item._count.deliverables}
-          </Badge>
-        ) : (
-          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
-        ),
-    }),
-    createTableColumn({
-      columnId: 'actions',
-      compare: () => 0,
-      renderHeaderCell: () => '',
-      renderCell: (item) => (
-        <div className={styles.actionCell}>
-          <Button
-            appearance="subtle"
-            icon={<EditRegular />}
-            size="small"
-            aria-label="Edit RAID item"
-            onClick={() => setEditingItem(item)}
-          />
-          <DeleteConfirmDialog
-            item={item}
-            onDeleted={() => setDeletedIds((prev) => new Set(Array.from(prev).concat(item.id)))}
-          />
-        </div>
-      ),
-    }),
-  ]
 
   const typeTabs = [
     { value: 'all' as const, label: 'All' },
@@ -482,44 +458,104 @@ export function RAIDLogView({ projectId, items, stats }: Props) {
 
         <div className={styles.gridWrap}>
           {filteredItems.length === 0 ? (
-            <div className={styles.empty}>
-              No RAID items match the current filters.
-            </div>
+            <div className={styles.empty}>No RAID items match the current filters.</div>
           ) : (
-            <DataGrid
-              aria-label="RAID Log"
-              items={filteredItems}
-              columns={columns}
-              sortable
-              size="small"
-              getRowId={(item) => item.id}
-              columnSizingOptions={{
-                title:   { defaultWidth: 340, minWidth: 200 },
-                type:    { defaultWidth: 110, minWidth: 90 },
-                severity:{ defaultWidth: 100, minWidth: 80 },
-                status:  { defaultWidth: 110, minWidth: 90 },
-                owner:   { defaultWidth: 130, minWidth: 100 },
-                dueDate: { defaultWidth: 110, minWidth: 90 },
-                linked:  { defaultWidth: 80,  minWidth: 60 },
-                actions: { defaultWidth: 72,  minWidth: 72 },
-              }}
-              resizableColumns
-            >
-              <DataGridHeader>
-                <DataGridRow>
-                  {({ renderHeaderCell }) => (
-                    <DataGridHeaderCell>{renderHeaderCell()}</DataGridHeaderCell>
-                  )}
-                </DataGridRow>
-              </DataGridHeader>
-              <DataGridBody<RAIDItemWithCount>>
-                {({ item, rowId }) => (
-                  <DataGridRow key={rowId}>
-                    {({ renderCell }) => <DataGridCell>{renderCell(item)}</DataGridCell>}
-                  </DataGridRow>
-                )}
-              </DataGridBody>
-            </DataGrid>
+            <div className={styles.table} role="table" aria-label="RAID Log">
+              {/* Header */}
+              <div className={styles.headerRow} role="row">
+                {([
+                  { key: 'title',    label: 'Title' },
+                  { key: 'type',     label: 'Type' },
+                  { key: 'severity', label: 'Severity' },
+                  { key: 'status',   label: 'Status' },
+                  { key: 'owner',    label: 'Owner' },
+                  { key: 'dueDate',  label: 'Due Date' },
+                  { key: null,       label: 'Linked' },
+                  { key: null,       label: '' },
+                ] as { key: SortKey | null; label: string }[]).map(({ key, label }, i) => (
+                  <div key={i} className={styles.hCell} role="columnheader">
+                    {key ? (
+                      <Button
+                        appearance="transparent"
+                        className={`${styles.sortBtn} ${sortKey === key ? styles.sortBtnActive : ''}`}
+                        onClick={() => toggleSort(key)}
+                        icon={sortKey === key ? (sortDir === 'asc' ? <ArrowSortUpRegular /> : <ArrowSortDownRegular />) : undefined}
+                        iconPosition="after"
+                      >
+                        {label}
+                      </Button>
+                    ) : (
+                      <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground3, padding: '0 4px' }}>{label}</Text>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Body */}
+              {filteredItems.map((item) => (
+                <div key={item.id} className={styles.dataRow} role="row">
+                  <div className={styles.titleCell} role="cell">
+                    <Text
+                      size={200}
+                      weight={item.severity === 'critical' ? 'semibold' : 'regular'}
+                      className={styles.titleText}
+                    >
+                      {item.title}
+                    </Text>
+                    {item.description && (
+                      <span className={styles.descText}>{item.description}</span>
+                    )}
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    <Badge appearance="tint" color={TYPE_COLORS[item.type]} size="small">
+                      {TYPE_LABELS[item.type]}
+                    </Badge>
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    <Badge appearance="tint" color={SEVERITY_COLORS[item.severity]} size="small">
+                      {SEVERITY_LABELS[item.severity]}
+                    </Badge>
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    <Badge appearance="tint" color={STATUS_COLORS[item.status]} size="small">
+                      {STATUS_LABELS[item.status]}
+                    </Badge>
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    <Text size={200} style={{ color: item.owner ? undefined : tokens.colorNeutralForeground3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.owner ?? '—'}
+                    </Text>
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3, whiteSpace: 'nowrap' }}>
+                      {item.dueDate
+                        ? new Date(item.dueDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '—'}
+                    </Text>
+                  </div>
+                  <div className={styles.cell} role="cell">
+                    {item._count.deliverables > 0 ? (
+                      <Badge appearance="tint" color="informative" size="small">{item._count.deliverables}</Badge>
+                    ) : (
+                      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
+                    )}
+                  </div>
+                  <div className={styles.actionCell} role="cell">
+                    <Button
+                      appearance="subtle"
+                      icon={<EditRegular />}
+                      size="small"
+                      aria-label="Edit RAID item"
+                      onClick={() => setEditingItem(item)}
+                    />
+                    <DeleteConfirmDialog
+                      item={item}
+                      onDeleted={() => setDeletedIds((prev) => new Set(Array.from(prev).concat(item.id)))}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

@@ -237,8 +237,14 @@ function PeopleTab({ people }: PeopleTabProps) {
 
       {dialogMode && (
         <PersonDialog
+          key={`${dialogMode}-${selectedPerson?.id ?? 'new'}`}
           open={!!dialogMode}
-          onOpenChange={(o) => { if (!o) setDialogMode(null) }}
+          onOpenChange={(o) => {
+            if (!o) {
+              setDialogMode(null)
+              setSelectedPerson(undefined)
+            }
+          }}
           person={selectedPerson}
           mode={dialogMode}
         />
@@ -411,8 +417,14 @@ function VendorsTab({ vendors }: VendorsTabProps) {
 
       {dialogMode && (
         <VendorDialog
+          key={`${dialogMode}-${selectedVendor?.id ?? 'new'}`}
           open={!!dialogMode}
-          onOpenChange={(o) => { if (!o) setDialogMode(null) }}
+          onOpenChange={(o) => {
+            if (!o) {
+              setDialogMode(null)
+              setSelectedVendor(undefined)
+            }
+          }}
           vendor={selectedVendor}
           mode={dialogMode}
         />

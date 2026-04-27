@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { TemplateCard } from './_components/TemplateCard'
 import { CreateTemplateDialog } from './_components/CreateTemplateDialog'
+import { TemplateImportDialog } from './_components/TemplateImportDialog'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 
 const PAGE_SIZE = 24
@@ -38,7 +39,12 @@ export default async function TemplatesPage({
     <>
       <PageHeader
         title="Templates"
-        actions={<CreateTemplateDialog />}
+        actions={
+          <>
+            <TemplateImportDialog />
+            <CreateTemplateDialog />
+          </>
+        }
       />
 
       <div style={{ padding: '24px' }}>

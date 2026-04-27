@@ -22,7 +22,7 @@ import {
   createTableColumn,
   type TableColumnDefinition,
 } from '@fluentui/react-components'
-import type { ProjectStatus, ProjectPhase } from '@prisma/client'
+import type { ProjectStatus, ProjectPhase, RAIDType } from '@prisma/client'
 import { getProjectActivityPage } from '@/lib/actions/activity'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -79,6 +79,10 @@ export interface ProjectOverviewProps {
   }[]
   recentActivityHasMore: boolean
   activityEventTypes: string[]
+}
+
+interface ProjectOverviewClientProps extends ProjectOverviewProps {
+  onRaidTypeSelect?: (type: RAIDType) => void
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -235,6 +239,32 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+  },
+  raidTileButton: {
+    appearance: 'none',
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    color: 'inherit',
+    padding: 0,
+    textAlign: 'left',
+    cursor: 'pointer',
+    boxShadow: tokens.shadow2,
+    transitionProperty: 'box-shadow, transform, border-color',
+    transitionDuration: tokens.durationNormal,
+    ':hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: tokens.shadow8,
+    },
+    ':focusVisible': {
+      outlineStyle: 'solid',
+      outlineWidth: '2px',
+      outlineColor: tokens.colorStrokeFocus2,
+      outlineOffset: '2px',
+    },
+    ':focus-visible': {
+      boxShadow: tokens.shadow8,
+    },
   },
   raidLabel: {
     color: tokens.colorNeutralForeground3,
@@ -456,7 +486,8 @@ export function ProjectOverview({
   recentActivity,
   recentActivityHasMore,
   activityEventTypes,
-}: ProjectOverviewProps) {
+  onRaidTypeSelect,
+}: ProjectOverviewClientProps) {
   const styles = useStyles()
   const statusCfg = STATUS_CONFIG[projectStatus]
   const openItems = byStatus.planned + byStatus.in_progress + byStatus.delayed
@@ -525,7 +556,7 @@ export function ProjectOverview({
     try {
       const result = await getProjectActivityPage(projectId, {
         offset,
-        limit: 20,
+        limit: 10,
         query: activityQuery.trim() || undefined,
         eventType: activityType === 'all' ? undefined : activityType,
       })
@@ -682,7 +713,12 @@ export function ProjectOverview({
         )}
 
         <div className={styles.raidRow}>
-          <Card>
+          <button
+            type="button"
+            className={styles.raidTileButton}
+            aria-label="Show risk RAID items"
+            onClick={() => onRaidTypeSelect?.('risk')}
+          >
             <div className={styles.raidCard}>
               <Text className={styles.raidLabel}>Open Risks</Text>
               <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
@@ -694,25 +730,40 @@ export function ProjectOverview({
                 )}
               </div>
             </div>
-          </Card>
-          <Card>
+          </button>
+          <button
+            type="button"
+            className={styles.raidTileButton}
+            aria-label="Show assumption RAID items"
+            onClick={() => onRaidTypeSelect?.('assumption')}
+          >
             <div className={styles.raidCard}>
               <Text className={styles.raidLabel}>Assumptions</Text>
               <Text className={styles.raidValue}>{raidSummary.byType.assumption}</Text>
             </div>
-          </Card>
-          <Card>
+          </button>
+          <button
+            type="button"
+            className={styles.raidTileButton}
+            aria-label="Show issue RAID items"
+            onClick={() => onRaidTypeSelect?.('issue')}
+          >
             <div className={styles.raidCard}>
               <Text className={styles.raidLabel}>Issues</Text>
               <Text className={styles.raidValue}>{raidSummary.byType.issue}</Text>
             </div>
-          </Card>
-          <Card>
+          </button>
+          <button
+            type="button"
+            className={styles.raidTileButton}
+            aria-label="Show dependency RAID items"
+            onClick={() => onRaidTypeSelect?.('dependency')}
+          >
             <div className={styles.raidCard}>
               <Text className={styles.raidLabel}>Dependencies</Text>
               <Text className={styles.raidValue}>{raidSummary.byType.dependency}</Text>
             </div>
-          </Card>
+          </button>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { WorkspaceView } from './_components/WorkspaceView'
 import { WorkspaceViewToggle } from './_components/WorkspaceViewToggle'
+import { projectAccessWhere } from '@/lib/project-access'
 
 interface Props {
   params: { id: string }
@@ -15,9 +16,14 @@ export default async function ProjectWorkspacePage({ params }: Props) {
   if (!session?.currentOrganizationId) notFound()
 
   const orgId = session.currentOrganizationId
+  const projectWhere = projectAccessWhere({
+    orgId,
+    userId: session.user.id,
+    role: session.role ?? 'viewer',
+  })
 
-  const project = await prisma.project.findUnique({
-    where: { id: params.id, organizationId: orgId },
+  const project = await prisma.project.findFirst({
+    where: { ...projectWhere, id: params.id },
     include: {
       focusAreaExecutions: {
         orderBy: { order: 'asc' },

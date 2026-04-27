@@ -1,6 +1,7 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -47,7 +48,7 @@ const formSchema = z.object({
   contactName: z.string().optional(),
   contactRole: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phone: z.string().optional(),
+  phone: z.string().min(1, 'Phone is required'),
   address: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
   notes: z.string().optional(),
@@ -68,6 +69,7 @@ interface VendorDialogProps {
 
 export function VendorDialog({ open, onOpenChange, vendor, mode }: VendorDialogProps) {
   const styles = useStyles()
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   const { register, handleSubmit, control, formState: { errors }, reset } = useForm<FormValues>({
@@ -84,6 +86,20 @@ export function VendorDialog({ open, onOpenChange, vendor, mode }: VendorDialogP
       notes: vendor?.notes ?? '',
     },
   })
+
+  useEffect(() => {
+    reset({
+      name: vendor?.name ?? '',
+      type: (vendor?.type as FormValues['type']) ?? 'supplier',
+      contactName: vendor?.contactName ?? '',
+      contactRole: vendor?.contactRole ?? '',
+      email: vendor?.email ?? '',
+      phone: vendor?.phone ?? '',
+      address: vendor?.address ?? '',
+      website: vendor?.website ?? '',
+      notes: vendor?.notes ?? '',
+    })
+  }, [mode, open, reset, vendor])
 
   function handleClose() {
     reset()
@@ -113,6 +129,7 @@ export function VendorDialog({ open, onOpenChange, vendor, mode }: VendorDialogP
                 onClick={() => {
                   startTransition(async () => {
                     await deleteVendor(vendor.id)
+                    router.refresh()
                     handleClose()
                   })
                 }}
@@ -133,7 +150,10 @@ export function VendorDialog({ open, onOpenChange, vendor, mode }: VendorDialogP
         mode === 'create'
           ? await createVendor(values)
           : await updateVendor(vendor!.id, values)
-      if (result.ok) handleClose()
+      if (result.ok) {
+        router.refresh()
+        handleClose()
+      }
     })
   }
 
@@ -193,7 +213,12 @@ export function VendorDialog({ open, onOpenChange, vendor, mode }: VendorDialogP
                   >
                     <Input {...register('email')} type="email" placeholder="contact@acme.com" />
                   </Field>
-                  <Field label="Phone">
+                  <Field
+                    label="Phone"
+                    required
+                    validationState={errors.phone ? 'error' : 'none'}
+                    validationMessage={errors.phone?.message}
+                  >
                     <Input {...register('phone')} placeholder="+1 555 000 0000" />
                   </Field>
                 </div>

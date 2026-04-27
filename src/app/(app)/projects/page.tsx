@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectsView } from './_components/ProjectsView'
 import { PaginationBar } from '@/components/ui/PaginationBar'
 import type { ProjectCardData } from './_components/ProjectCard'
+import { projectAccessWhere } from '@/lib/project-access'
 
 const PAGE_SIZE = 20
 
@@ -18,12 +19,17 @@ export default async function ProjectsPage({
   if (!session?.currentOrganizationId) redirect('/login')
 
   const orgId = session.currentOrganizationId
+  const projectWhere = projectAccessWhere({
+    orgId,
+    userId: session.user.id,
+    role: session.role ?? 'viewer',
+  })
   const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
   const [rawProjects, total] = await Promise.all([
     prisma.project.findMany({
-      where: { organizationId: orgId },
+      where: projectWhere,
       orderBy: { createdAt: 'desc' },
       skip,
       take: PAGE_SIZE,
@@ -40,7 +46,7 @@ export default async function ProjectsPage({
         },
       },
     }),
-    prisma.project.count({ where: { organizationId: orgId } }),
+    prisma.project.count({ where: projectWhere }),
   ])
 
   const projects: ProjectCardData[] = rawProjects.map((p) => {

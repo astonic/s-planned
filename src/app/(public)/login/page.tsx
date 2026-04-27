@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { Suspense, useState, useTransition } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Card,
   Field,
@@ -38,9 +39,18 @@ const useStyles = makeStyles({
     padding: tokens.spacingHorizontalXXL,
   },
   logo: {
-    fontSize: '28px',
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorBrandForeground1,
+    display: 'block',
+    width: '160px',
+    height: 'auto',
+  },
+  logoChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 'var(--sp-radius-md)',
+    padding: '6px 10px',
+    boxShadow: 'var(--sp-shadow-1)',
     marginBottom: tokens.spacingVerticalXXL,
   },
   card: { width: '100%', maxWidth: '400px' },
@@ -57,6 +67,14 @@ const useStyles = makeStyles({
 })
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   const styles = useStyles()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -91,7 +109,9 @@ export default function LoginPage() {
 
   return (
     <div className={styles.page}>
-      <Text className={styles.logo}>S-Planned</Text>
+      <Link href="/landing" className={styles.logoChip} aria-label="S-Planned home">
+        <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority className={styles.logo} />
+      </Link>
 
       <Card className={styles.card}>
         <form onSubmit={form.handleSubmit(onSubmit)} className={styles.form}>
@@ -151,11 +171,11 @@ export default function LoginPage() {
       {/* ── Demo accounts (remove before production) ── */}
       <div style={{
         marginTop: 20, width: '100%', maxWidth: 400,
-        border: '1.5px dashed #F7B900',
+        border: '1.5px dashed var(--sp-warning)',
         borderRadius: 10, padding: '14px 18px',
-        backgroundColor: '#FFFBEA',
+        backgroundColor: 'var(--sp-warning-light)',
       }}>
-        <Text size={100} weight="semibold" style={{ color: '#856404', display: 'block', marginBottom: 10 }}>
+        <Text size={100} weight="semibold" style={{ color: 'var(--sp-warning-dark)', display: 'block', marginBottom: 10 }}>
           🧪 Demo accounts (testing only)
         </Text>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -175,11 +195,11 @@ export default function LoginPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '7px 12px', borderRadius: 6, border: `1px solid ${color}22`,
-                backgroundColor: '#fff', cursor: 'pointer', textAlign: 'left',
+                backgroundColor: 'var(--sp-surface)', cursor: 'pointer', textAlign: 'left',
                 transition: 'background 0.15s',
               }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${color}0D`)}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#fff')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'var(--sp-surface)')}
             >
               <span style={{ fontSize: 12, fontWeight: 600, color }}>
                 {label}

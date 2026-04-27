@@ -1,13 +1,12 @@
 'use client'
 
+import Image from 'next/image'
 import {
   makeStyles,
   tokens,
   Text,
   Badge,
   Divider,
-  FluentProvider,
-  webLightTheme,
 } from '@fluentui/react-components'
 import { SectionRenderer } from '@/app/(app)/reports/_components/SectionRenderer'
 import type { ReportType } from '@prisma/client'
@@ -33,16 +32,26 @@ interface PublicReportViewProps {
 const useStyles = makeStyles({
   page: {
     minHeight: '100vh',
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: 'var(--sp-page-bg)',
+    color: 'var(--sp-page-fg)',
     display: 'flex', flexDirection: 'column',
   },
   topBar: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface)',
+    borderBottom: '1px solid var(--sp-gray-200)',
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalXL}`,
     display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM,
   },
-  brand: { fontWeight: tokens.fontWeightSemibold, color: tokens.colorBrandForeground1 },
+  brandLogo: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 'var(--sp-radius-md)',
+    padding: '4px 8px',
+    boxShadow: 'var(--sp-shadow-1)',
+    flexShrink: 0,
+  },
   body: {
     maxWidth: '900px',
     width: '100%',
@@ -51,22 +60,22 @@ const useStyles = makeStyles({
     display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL,
   },
   header: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface)',
+    border: '1px solid var(--sp-gray-200)',
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingVerticalL,
     display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalS,
   },
   sectionCard: {
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface)',
+    border: '1px solid var(--sp-gray-200)',
     borderRadius: tokens.borderRadiusMedium,
     overflow: 'hidden',
   },
   sectionHeader: {
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface-2)',
+    borderBottom: '1px solid var(--sp-gray-200)',
   },
   sectionBody: {
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalL}`,
@@ -74,15 +83,15 @@ const useStyles = makeStyles({
   narrativeBlock: {
     marginTop: tokens.spacingVerticalM,
     padding: tokens.spacingVerticalM,
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: 'var(--sp-surface-2)',
     borderRadius: tokens.borderRadiusMedium,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    border: '1px solid var(--sp-gray-200)',
   },
   footer: {
     textAlign: 'center' as const,
     padding: tokens.spacingVerticalL,
-    color: tokens.colorNeutralForeground3,
-    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    color: 'var(--sp-gray-600)',
+    borderTop: '1px solid var(--sp-gray-200)',
     marginTop: 'auto',
   },
 })
@@ -91,11 +100,13 @@ export function PublicReportView({ title, reportType, projectName, createdBy, pu
   const styles = useStyles()
   const sortedSections = [...sections].sort((a, b) => a.sortOrder - b.sortOrder)
 
-  const inner = (
+  return (
     <div className={styles.page}>
       {/* Top bar */}
       <div className={styles.topBar}>
-        <Text className={styles.brand} size={400}>S-Planned</Text>
+        <div className={styles.brandLogo}>
+          <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority style={{ width: 140, height: 'auto', display: 'block' }} />
+        </div>
         <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Operational Readiness Report</Text>
       </div>
 
@@ -141,6 +152,4 @@ export function PublicReportView({ title, reportType, projectName, createdBy, pu
       </div>
     </div>
   )
-
-  return <FluentProvider theme={webLightTheme}>{inner}</FluentProvider>
 }

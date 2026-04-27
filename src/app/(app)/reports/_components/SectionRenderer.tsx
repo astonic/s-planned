@@ -22,8 +22,8 @@ const useStyles = makeStyles({
   kpiCard: {
     flex: 1,
     minWidth: '140px',
-    backgroundColor: tokens.colorNeutralBackground2,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface-2)',
+    border: '1px solid var(--sp-gray-200)',
     borderRadius: tokens.borderRadiusMedium,
     padding: tokens.spacingVerticalM,
     display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center',
@@ -32,8 +32,8 @@ const useStyles = makeStyles({
   th: {
     padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
     textAlign: 'left' as const,
-    backgroundColor: tokens.colorNeutralBackground2,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: 'var(--sp-surface-2)',
+    borderBottom: '1px solid var(--sp-gray-200)',
     fontSize: tokens.fontSizeBase200,
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground3,
@@ -43,7 +43,7 @@ const useStyles = makeStyles({
   },
   td: {
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderBottom: '1px solid var(--sp-gray-200)',
     fontSize: tokens.fontSizeBase300,
     verticalAlign: 'top' as const,
   },
@@ -58,14 +58,14 @@ const useStyles = makeStyles({
     boxShadow: 'var(--sp-glow-blue)',
   },
   faBlock: {
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    border: '1px solid var(--sp-gray-200)',
     borderRadius: tokens.borderRadiusMedium,
     overflow: 'hidden',
     marginBottom: tokens.spacingVerticalM,
   },
   faHeader: {
     padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-    backgroundColor: tokens.colorNeutralBackground2,
+    backgroundColor: 'var(--sp-surface-2)',
     display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalM,
   },
 })
@@ -275,7 +275,7 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
             <Divider />
             <Text size={200} weight="semibold">Recent Evidence</Text>
             {recent.map((e, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${tokens.colorNeutralStroke2}` }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px solid var(--sp-gray-200)' }}>
                 <Badge appearance="outline" size="small">{String(e.type ?? '')}</Badge>
                 <Text size={200}>{String(e.name ?? '')}</Text>
                 {!!e.verified && <Badge appearance="tint" color="success" size="extra-small">Verified</Badge>}
@@ -342,7 +342,7 @@ export function SectionRenderer({ type, content }: { type: string; content: unkn
             </div>
             {fa.subSections.map((ss) => (
               <div key={ss.name}>
-                <div style={{ padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`, backgroundColor: tokens.colorNeutralBackground1 }}>
+                <div style={{ padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`, backgroundColor: 'var(--sp-surface)' }}>
                   <Text size={200} weight="semibold" style={{ color: tokens.colorNeutralForeground2 }}>{ss.name}</Text>
                 </div>
                 <ReportDataGrid

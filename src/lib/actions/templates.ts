@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import ExcelJS from 'exceljs'
+import type { ProjectPhase } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
@@ -35,6 +37,189 @@ const templateSchema = z.object({
   version: z.string().optional(),
 })
 
+const TEMPLATE_IMPORT_HEADERS = {
+  focusAreaCode: 'Focus Area Code',
+  focusAreaName: 'Focus Area Name',
+  subSectionCode: 'Sub-section Code',
+  subSectionName: 'Sub-section Name',
+  deliverableCode: 'Deliverable Code',
+  deliverableName: 'Deliverable Name',
+  description: 'Description',
+  phase: 'Phase',
+  domain: 'Domain',
+  estimatedDuration: 'Estimated Duration',
+  acceptanceCriteria: 'Acceptance Criteria',
+  evidenceRequirements: 'Evidence Requirements',
+} as const
+
+const PROJECT_PHASES = new Set<ProjectPhase>(['pre_commissioning', 'commissioning', 'ramp_up', 'handover'])
+
+function asText(value: unknown): string {
+  if (value instanceof Date) return value.toISOString()
+  if (value && typeof value === 'object') {
+    if ('text' in value && typeof value.text === 'string') return value.text.trim()
+    if ('result' in value) return asText(value.result)
+    if ('richText' in value && Array.isArray(value.richText)) {
+      return value.richText.map((part: { text?: string }) => part.text ?? '').join('').trim()
+    }
+  }
+  return String(value ?? '').trim()
+}
+
+function splitLines(value: unknown): string[] {
+  return asText(value)
+    .split(/\r?\n|;/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+function parseBoolean(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+  return !['false', 'no', 'n', '0', 'optional'].includes(normalized)
+}
+
+function getHeaderMap(sheet: ExcelJS.Worksheet): Map<string, number> {
+  const headers = new Map<string, number>()
+  sheet.getRow(1).eachCell((cell, colNumber) => {
+    const header = asText(cell.value)
+    if (header) headers.set(header, colNumber)
+  })
+  return headers
+}
+
+function getCellText(row: ExcelJS.Row, headers: Map<string, number>, header: string): string {
+  const colNumber = headers.get(header)
+  return colNumber ? asText(row.getCell(colNumber).value) : ''
+}
+
+function parseMeta(workbook: ExcelJS.Workbook) {
+  const sheet = workbook.getWorksheet('Template') ?? workbook.getWorksheet('Metadata') ?? workbook.getWorksheet('Meta')
+  if (!sheet) throw new Error('Workbook must include a Template sheet.')
+
+  const headers = getHeaderMap(sheet)
+  const meta = new Map<string, string>()
+  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const row = sheet.getRow(rowNumber)
+    const field = getCellText(row, headers, 'Field')
+    const value = getCellText(row, headers, 'Value')
+    if (field) meta.set(field.toLowerCase(), value)
+  }
+
+  const name = meta.get('name')
+  if (!name) throw new Error('Template sheet must include a Name value.')
+
+  return {
+    name,
+    description: meta.get('description') || undefined,
+    industry: meta.get('industry') || undefined,
+    version: meta.get('version') || '1.0',
+  }
+}
+
+function parseTemplateRows(workbook: ExcelJS.Workbook) {
+  const sheet = workbook.getWorksheet('Deliverables')
+  if (!sheet) throw new Error('Workbook must include a Deliverables sheet.')
+
+  const headers = getHeaderMap(sheet)
+  const rows: ExcelJS.Row[] = []
+  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const row = sheet.getRow(rowNumber)
+    let hasValue = false
+    row.eachCell((cell) => {
+      if (asText(cell.value)) hasValue = true
+    })
+    if (hasValue) rows.push(row)
+  }
+  if (rows.length === 0) throw new Error('Deliverables sheet must include at least one row.')
+
+  const focusAreas = new Map<string, {
+    code: string
+    name: string
+    subSections: Map<string, {
+      code: string
+      name: string
+      deliverables: Array<{
+        code: string
+        name: string
+        description?: string
+        phase?: ProjectPhase
+        domain?: string
+        estimatedDuration?: number
+        acceptanceCriteria: Array<{ description: string; verificationMethod?: string }>
+        evidenceRequirements: Array<{ name: string; type?: string; required: boolean; description?: string }>
+      }>
+    }>
+  }>()
+
+  rows.forEach((row) => {
+    const rowNumber = row.number
+    const focusAreaCode = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.focusAreaCode)
+    const focusAreaName = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.focusAreaName)
+    const subSectionCode = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.subSectionCode)
+    const subSectionName = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.subSectionName)
+    const deliverableCode = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.deliverableCode)
+    const deliverableName = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.deliverableName)
+
+    if (!focusAreaCode || !focusAreaName || !subSectionCode || !subSectionName || !deliverableCode || !deliverableName) {
+      throw new Error(`Deliverables row ${rowNumber} is missing a required code or name.`)
+    }
+
+    const phaseText = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.phase) as ProjectPhase
+    if (phaseText && !PROJECT_PHASES.has(phaseText)) {
+      throw new Error(`Deliverables row ${rowNumber} has an invalid Phase value.`)
+    }
+
+    const durationText = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.estimatedDuration)
+    const estimatedDuration = durationText ? Number(durationText) : undefined
+    if (estimatedDuration !== undefined && (!Number.isInteger(estimatedDuration) || estimatedDuration < 0)) {
+      throw new Error(`Deliverables row ${rowNumber} has an invalid Estimated Duration.`)
+    }
+
+    const faKey = focusAreaCode.toLowerCase()
+    let focusArea = focusAreas.get(faKey)
+    if (!focusArea) {
+      focusArea = { code: focusAreaCode, name: focusAreaName, subSections: new Map() }
+      focusAreas.set(faKey, focusArea)
+    }
+
+    const ssKey = `${faKey}:${subSectionCode.toLowerCase()}`
+    let subSection = focusArea.subSections.get(ssKey)
+    if (!subSection) {
+      subSection = { code: subSectionCode, name: subSectionName, deliverables: [] }
+      focusArea.subSections.set(ssKey, subSection)
+    }
+
+    subSection.deliverables.push({
+      code: deliverableCode,
+      name: deliverableName,
+      description: getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.description) || undefined,
+      phase: phaseText || undefined,
+      domain: getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.domain) || undefined,
+      estimatedDuration,
+      acceptanceCriteria: splitLines(getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.acceptanceCriteria)).map((item) => {
+        const [description, verificationMethod] = item.split('|').map((part) => part.trim())
+        return { description, verificationMethod: verificationMethod || undefined }
+      }),
+      evidenceRequirements: splitLines(getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.evidenceRequirements)).map((item) => {
+        const [name, type, required, description] = item.split('|').map((part) => part.trim())
+        return { name, type: type || undefined, required: required ? parseBoolean(required) : true, description: description || undefined }
+      }),
+    })
+  })
+
+  return Array.from(focusAreas.values()).map((focusArea, focusAreaIndex) => ({
+    code: focusArea.code,
+    name: focusArea.name,
+    order: focusAreaIndex,
+    subSections: Array.from(focusArea.subSections.values()).map((subSection, subSectionIndex) => ({
+      code: subSection.code,
+      name: subSection.name,
+      order: subSectionIndex,
+      deliverables: subSection.deliverables,
+    })),
+  }))
+}
+
 // ── Template CRUD ─────────────────────────────────────────────────────────────
 
 export async function createTemplate(
@@ -55,6 +240,82 @@ export async function createTemplate(
     await auditLog(orgId, auth.userName, template.id, 'template.created', `Created template "${template.name}"`)
     revalidatePath('/templates')
     return { ok: true, data: template }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
+export async function importTemplateFromExcel(
+  formData: FormData,
+): Promise<ActionResult<{ id: string; name: string; focusAreas: number; deliverables: number }>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+    const file = formData.get('file')
+
+    if (!(file instanceof File)) throw new Error('Choose an Excel file to upload.')
+    if (file.size === 0) throw new Error('The selected file is empty.')
+    if (file.size > 5 * 1024 * 1024) throw new Error('Template imports must be 5 MB or smaller.')
+
+    const workbook = new ExcelJS.Workbook()
+    const fileBuffer = Buffer.from(await file.arrayBuffer())
+    await workbook.xlsx.load(fileBuffer as unknown as Parameters<typeof workbook.xlsx.load>[0])
+    const meta = parseMeta(workbook)
+    const focusAreas = parseTemplateRows(workbook)
+    const deliverableCount = focusAreas.reduce(
+      (total, fa) => total + fa.subSections.reduce((subTotal, ss) => subTotal + ss.deliverables.length, 0),
+      0,
+    )
+
+    const template = await withTenant(orgId, async (tx) => {
+      return tx.template.create({
+        data: {
+          organizationId: orgId,
+          ...meta,
+          focusAreas: {
+            create: focusAreas.map((fa) => ({
+              code: fa.code,
+              name: fa.name,
+              order: fa.order,
+              subSections: {
+                create: fa.subSections.map((ss) => ({
+                  code: ss.code,
+                  name: ss.name,
+                  order: ss.order,
+                  deliverables: {
+                    create: ss.deliverables.map((deliverable) => ({
+                      code: deliverable.code,
+                      name: deliverable.name,
+                      description: deliverable.description,
+                      phase: deliverable.phase,
+                      domain: deliverable.domain,
+                      estimatedDuration: deliverable.estimatedDuration,
+                      acceptanceCriteria: deliverable.acceptanceCriteria.length
+                        ? { create: deliverable.acceptanceCriteria }
+                        : undefined,
+                      evidenceRequirements: deliverable.evidenceRequirements.length
+                        ? { create: deliverable.evidenceRequirements.filter((requirement) => requirement.name) }
+                        : undefined,
+                    })),
+                  },
+                })),
+              },
+            })),
+          },
+        },
+        select: { id: true, name: true },
+      })
+    })
+
+    await auditLog(
+      orgId,
+      auth.userName,
+      template.id,
+      'template.imported',
+      `Imported template "${template.name}" from Excel`,
+    )
+    revalidatePath('/templates')
+    return { ok: true, data: { ...template, focusAreas: focusAreas.length, deliverables: deliverableCount } }
   } catch (e) {
     return { ok: false, error: (e as Error).message }
   }
