@@ -33,7 +33,7 @@ const TABS: { key: Tab; label: string; icon: React.ReactElement }[] = [
   { key: 'timeline',    label: 'Timeline',    icon: <CalendarLtrRegular /> },
   { key: 'charts',      label: 'Charts',      icon: <ChartMultipleRegular /> },
   { key: 'people',      label: 'People',      icon: <PeopleRegular /> },
-  { key: 'goals',       label: 'Goals',       icon: <TrophyRegular /> },
+  { key: 'goals',       label: 'Focus Areas',  icon: <TrophyRegular /> },
   { key: 'assignments', label: 'Assignments', icon: <ClipboardTaskRegular /> },
 ]
 
