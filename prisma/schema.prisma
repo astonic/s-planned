@@ -297,20 +297,13 @@ model SubSection {
   @@map("sub_sections")
 }
 
-enum ProjectPhase {
-  pre_commissioning
-  commissioning
-  ramp_up
-  handover
-}
-
 model DeliverableTemplate {
   id                String   @id @default(uuid())
   subSectionId      String
   code              String
   name              String
   description       String?
-  phase             ProjectPhase?
+  phase             String?
   domain            String?
   estimatedDuration Int?
 
@@ -535,7 +528,7 @@ model DeliverableExecution {
   code        String
   description String?
   status      DeliverableStatus @default(planned)
-  phase       ProjectPhase?
+  phase       String?
   domain      String?
 
   startDate  DateTime?

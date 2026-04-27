@@ -7,7 +7,7 @@ import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
 import { assertProjectAccess } from '@/lib/project-access'
 import { createLogger } from '@/lib/logger'
-import type { DeliverableStatus, EvidenceType, ProjectPhase } from '@prisma/client'
+import type { DeliverableStatus, EvidenceType } from '@prisma/client'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ const createDeliverableSchema = z.object({
   code: z.string().min(1).max(50),
   name: z.string().min(1),
   description: z.string().optional(),
-  phase: z.enum(['pre_commissioning', 'commissioning', 'ramp_up', 'handover']).nullable().optional(),
+  phase: z.string().max(100).nullable().optional(),
   domain: z.string().optional(),
   ownerId: z.string().nullable().optional(),
   startDate: z.coerce.date().nullable().optional(),
@@ -313,6 +313,43 @@ export async function saveProjectNotificationSettings(
   }
 }
 
+// ── SubSection actions ────────────────────────────────────────────────────────
+
+export async function createSubSectionExecution(
+  focusAreaExecutionId: string,
+  data: { code: string; name: string },
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const auth = await requireAuth('member')
+    const orgId = auth.orgId
+
+    const ss = await withTenant(orgId, async (tx) => {
+      const fae = await tx.focusAreaExecution.findFirst({
+        where: { id: focusAreaExecutionId, project: { organizationId: orgId } },
+        select: { projectId: true },
+      })
+      if (!fae) throw new Error('Focus area not found')
+
+      await assertProjectAccess({ orgId, userId: auth.userId, role: auth.role, projectId: fae.projectId }, tx)
+
+      const count = await tx.subSectionExecution.count({ where: { focusAreaExecutionId } })
+      return tx.subSectionExecution.create({
+        data: {
+          focusAreaExecutionId,
+          code: data.code.trim(),
+          name: data.name.trim(),
+          order: count,
+        },
+        select: { id: true },
+      })
+    })
+
+    return { ok: true, data: { id: ss.id } }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message }
+  }
+}
+
 // ── Deliverable actions ───────────────────────────────────────────────────────
 
 export async function createProjectDeliverable(
@@ -367,7 +404,7 @@ export async function createProjectDeliverable(
           code: parsed.code.trim(),
           name: parsed.name.trim(),
           description: parsed.description?.trim() || null,
-          phase: (parsed.phase ?? null) as ProjectPhase | null,
+          phase: parsed.phase ?? null,
           domain: parsed.domain?.trim() || null,
           ownerId: parsed.ownerId || null,
           startDate: parsed.startDate ?? null,

@@ -26,7 +26,6 @@ import { DismissCircleRegular } from '@fluentui/react-icons'
 import type {
   DeliverableExecution,
   DeliverableStatus,
-  ProjectPhase,
   RAIDType,
   RAIDSeverity,
   RAIDStatus,
@@ -305,11 +304,18 @@ const STATUS_OPTIONS: { value: DeliverableStatus; label: string }[] = [
 const STATUS_BADGE_COLORS: Record<DeliverableStatus, 'informative' | 'brand' | 'warning' | 'success'> = {
   planned: 'informative', in_progress: 'brand', delayed: 'warning', closed: 'success',
 }
-const PHASE_COLORS: Record<ProjectPhase, 'informative' | 'warning' | 'success' | 'severe'> = {
+const PHASE_COLORS: Record<string, 'informative' | 'warning' | 'success' | 'severe'> = {
   pre_commissioning: 'informative', commissioning: 'warning', ramp_up: 'success', handover: 'severe',
 }
-const PHASE_LABELS: Record<ProjectPhase, string> = {
+const PHASE_LABELS: Record<string, string> = {
   pre_commissioning: 'Pre-Commissioning', commissioning: 'Commissioning', ramp_up: 'Ramp Up', handover: 'Handover',
+}
+function phaseColor(p: string | null): 'informative' | 'warning' | 'success' | 'severe' {
+  return (p && PHASE_COLORS[p]) || 'informative'
+}
+function phaseLabel(p: string | null): string {
+  if (!p) return ''
+  return PHASE_LABELS[p] ?? p.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 const RAID_TYPE_COLORS: Record<RAIDType, 'brand' | 'danger' | 'warning' | 'informative'> = {
   risk: 'danger', assumption: 'informative', issue: 'warning', dependency: 'brand',
@@ -563,8 +569,8 @@ export function DeliverableDetail({ deliverable, projectId: _projectId, linkedRA
               {STATUS_OPTIONS.find((o) => o.value === currentStatus)?.label ?? currentStatus}
             </Badge>
             {deliverable.phase && (
-              <Badge appearance="tint" color={PHASE_COLORS[deliverable.phase]}>
-                {PHASE_LABELS[deliverable.phase]}
+              <Badge appearance="tint" color={phaseColor(deliverable.phase)}>
+                {phaseLabel(deliverable.phase)}
               </Badge>
             )}
             <Badge appearance="outline">{deliverable.code}</Badge>

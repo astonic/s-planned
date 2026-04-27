@@ -78,7 +78,7 @@ const useStyles = makeStyles({
   content: { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
 })
 
-export function WorkspaceView({ project }: { project: ProjectWorkspaceData }) {
+export function WorkspaceView({ project, phaseOptions }: { project: ProjectWorkspaceData; phaseOptions: string[] }) {
   const s = useStyles()
   const [tab, setTab] = useState<Tab>('grid')
   const [query, setQuery] = useState('')
@@ -114,7 +114,7 @@ export function WorkspaceView({ project }: { project: ProjectWorkspaceData }) {
           {allDs.length} deliverables · {pct}% complete
         </Text>
         <div style={{ marginLeft: 'auto' }}>
-          <AddDeliverableWizard projectId={project.id} focusAreas={project.focusAreaExecutions} />
+          <AddDeliverableWizard projectId={project.id} focusAreas={project.focusAreaExecutions} phaseOptions={phaseOptions} />
         </div>
       </div>
 

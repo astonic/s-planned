@@ -25,6 +25,24 @@ export default async function ProjectWorkspacePage({ params }: Props) {
   const project = await prisma.project.findFirst({
     where: { ...projectWhere, id: params.id },
     include: {
+      template: {
+        include: {
+          focusAreas: {
+            orderBy: { order: 'asc' },
+            include: {
+              subSections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  deliverables: {
+                    orderBy: { code: 'asc' },
+                    select: { phase: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       focusAreaExecutions: {
         orderBy: { order: 'asc' },
         include: {
@@ -47,6 +65,14 @@ export default async function ProjectWorkspacePage({ params }: Props) {
 
   if (!project) notFound()
 
+  const templatePhases = project.template?.focusAreas.flatMap((fa) =>
+    fa.subSections.flatMap((ss) => ss.deliverables.map((d) => d.phase).filter(Boolean))
+  ) ?? []
+  const executionPhases = project.focusAreaExecutions.flatMap((fa) =>
+    fa.subSections.flatMap((ss) => ss.deliverables.map((d) => d.phase).filter(Boolean))
+  )
+  const phaseOptions = Array.from(new Set(templatePhases.length > 0 ? templatePhases : executionPhases)) as string[]
+
   return (
     <>
       <PageHeader
@@ -59,7 +85,7 @@ export default async function ProjectWorkspacePage({ params }: Props) {
         actions={<WorkspaceViewToggle projectId={project.id} />}
       />
       <div style={{ padding: '24px' }}>
-        <WorkspaceView project={project} />
+        <WorkspaceView project={project} phaseOptions={phaseOptions} />
       </div>
     </>
   )

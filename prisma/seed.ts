@@ -1891,6 +1891,38 @@ async function main() {
     })
   }
 
+  // Second org — admin@example.com is a member of both so they can test org switching
+  const org2 = await prisma.organization.upsert({
+    where: { slug: 'apex-resources' },
+    update: { name: 'Apex Resources' },
+    create: { name: 'Apex Resources', slug: 'apex-resources' },
+  })
+
+  await prisma.organizationSettings.upsert({
+    where: { organizationId: org2.id },
+    update: {},
+    create: {
+      organizationId: org2.id,
+      description: 'Second demo tenant for testing multi-org switching.',
+      timezone: 'Australia/Perth',
+      dateFormat: 'DD/MM/YYYY',
+      storageProvider: 'local',
+      notifyEmail: true,
+      notifyReminders: true,
+      notifyRaid: true,
+      notifyDigest: true,
+      ssoEnabled: false,
+    },
+  })
+
+  const adminUser = await prisma.user.findUniqueOrThrow({ where: { email: 'admin@example.com' } })
+  await prisma.organizationMembership.upsert({
+    where: { organizationId_userId: { organizationId: org2.id, userId: adminUser.id } },
+    update: { role: 'admin' },
+    create: { userId: adminUser.id, organizationId: org2.id, role: 'admin' },
+  })
+  console.log('admin@example.com is now a member of both Example Mining Co and Apex Resources')
+
   await prisma.invite.upsert({
     where: { token: 'seed-safety-lead-invite' },
     update: {

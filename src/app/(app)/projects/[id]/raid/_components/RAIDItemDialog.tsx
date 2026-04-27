@@ -14,7 +14,9 @@ import {
   DialogActions,
   DialogContent,
   Field,
+  Combobox,
   Input,
+  Option,
   Textarea,
   Select,
   Spinner,
@@ -247,16 +249,25 @@ interface Props {
   projectId: string
   mode: 'create' | 'edit'
   item?: RAIDItemWithCount
+  people: RAIDOwnerOption[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
+export interface RAIDOwnerOption {
+  id: string
+  name: string
+  company: string | null
+  email: string | null
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function RAIDItemDialog({ projectId, mode, item, open, onOpenChange }: Props) {
+export function RAIDItemDialog({ projectId, mode, item, people, open, onOpenChange }: Props) {
   const s = useStyles()
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<'details' | 'deliverables'>('details')
+  const [ownerSearch, setOwnerSearch] = useState('')
 
   const {
     control,
@@ -283,8 +294,10 @@ export function RAIDItemDialog({ projectId, mode, item, open, onOpenChange }: Pr
         dueDate: item.dueDate ? new Date(item.dueDate).toISOString().split('T')[0] : '',
         mitigationPlan: item.mitigationPlan ?? '',
       })
+      setOwnerSearch(item.owner ?? '')
     } else if (open && mode === 'create') {
       reset(DEFAULT_VALUES)
+      setOwnerSearch('')
     }
     if (open) setActiveTab('details')
   }, [open, mode, item, reset])
@@ -422,7 +435,49 @@ export function RAIDItemDialog({ projectId, mode, item, open, onOpenChange }: Pr
                   <div className={s.row}>
                     <Controller name="owner" control={control} render={({ field }) => (
                       <Field label="Owner">
-                        <Input {...field} placeholder="Name or team…" />
+                        <Combobox
+                          value={ownerSearch}
+                          selectedOptions={people.filter((person) => person.name === field.value).map((person) => person.id)}
+                          placeholder="Search people…"
+                          onChange={(event) => {
+                            setOwnerSearch(event.target.value)
+                            if (event.target.value !== field.value) field.onChange('')
+                          }}
+                          onOptionSelect={(_, data) => {
+                            if (data.optionValue === '__unassigned') {
+                              field.onChange('')
+                              setOwnerSearch('')
+                              return
+                            }
+
+                            const person = people.find((entry) => entry.id === data.optionValue)
+                            field.onChange(person?.name ?? '')
+                            setOwnerSearch(person?.name ?? '')
+                          }}
+                        >
+                          <Option value="__unassigned" text="Unassigned">Unassigned</Option>
+                          {people
+                            .filter((person) => {
+                              const query = ownerSearch.trim().toLowerCase()
+                              if (!query) return true
+                              return [person.name, person.company ?? '', person.email ?? '']
+                                .join(' ')
+                                .toLowerCase()
+                                .includes(query)
+                            })
+                            .map((person) => (
+                              <Option key={person.id} value={person.id} text={person.name}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <Text size={200}>{person.name}</Text>
+                                  {(person.company || person.email) && (
+                                    <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
+                                      {[person.company, person.email].filter(Boolean).join(' · ')}
+                                    </Text>
+                                  )}
+                                </div>
+                              </Option>
+                            ))}
+                        </Combobox>
                       </Field>
                     )} />
                     <Controller name="dueDate" control={control} render={({ field }) => (

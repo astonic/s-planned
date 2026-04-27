@@ -11,6 +11,7 @@ import { WorkspaceView } from '../workspace/_components/WorkspaceView'
 import type { ProjectWorkspaceData } from '../workspace/_components/WorkspaceView'
 import { RAIDLogView } from '../raid/_components/RAIDLogView'
 import type { RAIDItemWithCount } from '../raid/_components/RAIDLogView'
+import type { RAIDOwnerOption } from '../raid/_components/RAIDItemDialog'
 import type { RAIDType } from '@prisma/client'
 import { ProjectNotificationSettingsForm } from './ProjectNotificationSettingsForm'
 import { ProjectNotificationList } from './ProjectNotificationList'
@@ -38,6 +39,8 @@ interface ProjectTabsProps {
   projectId: string
   decisions: DecisionItem[]
   deliverablesProject: ProjectWorkspaceData
+  phaseOptions: string[]
+  people: RAIDOwnerOption[]
   initialTab?: ProjectTab
   raid: {
     items: RAIDItemWithCount[]
@@ -63,7 +66,7 @@ type ProjectTab = 'overview' | 'deliverables' | 'decisions' | 'raid' | 'notifica
 type NotificationTab = 'list' | 'preferences'
 type RaidTypeFilter = 'all' | RAIDType
 
-export function ProjectTabs({ overview, projectId, decisions, deliverablesProject, initialTab, raid, notificationSettings, notificationSuggestions, aiSuggestions }: ProjectTabsProps) {
+export function ProjectTabs({ overview, projectId, decisions, deliverablesProject, phaseOptions, people, initialTab, raid, notificationSettings, notificationSuggestions, aiSuggestions }: ProjectTabsProps) {
   const styles = useStyles()
   const [tab, setTab] = useState<ProjectTab>(initialTab ?? 'overview')
   const [notificationTab, setNotificationTab] = useState<NotificationTab>('list')
@@ -94,7 +97,7 @@ export function ProjectTabs({ overview, projectId, decisions, deliverablesProjec
         }}
       />
       {tab === 'raid' ? (
-        <RAIDLogView projectId={projectId} items={raid.items} stats={raid.stats} initialTypeFilter={raidTypeFilter} />
+        <RAIDLogView projectId={projectId} items={raid.items} stats={raid.stats} people={people} initialTypeFilter={raidTypeFilter} />
       ) : (
         <div className={styles.tabContent}>
           {tab === 'overview' && (
@@ -106,7 +109,7 @@ export function ProjectTabs({ overview, projectId, decisions, deliverablesProjec
               }}
             />
           )}
-          {tab === 'deliverables' && <WorkspaceView project={deliverablesProject} />}
+          {tab === 'deliverables' && <WorkspaceView project={deliverablesProject} phaseOptions={phaseOptions} />}
           {tab === 'decisions' && <DecisionLog projectId={projectId} initialDecisions={decisions} />}
           {tab === 'ai' && <AISuggestionsTab projectId={projectId} {...aiSuggestions} />}
           {tab === 'notifications' && (

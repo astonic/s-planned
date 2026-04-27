@@ -16,7 +16,6 @@ import {
 } from '@fluentui/react-icons'
 import { useSidebar } from './SidebarContext'
 import { OrganizationSwitcher } from './OrganizationSwitcher'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 const useStyles = makeStyles({
   sidebar: {
@@ -267,9 +266,6 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
           ) : item
         })()}
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: tokens.spacingVerticalXS }}>
-          <ThemeToggle />
-        </div>
       </nav>
 
       <Button

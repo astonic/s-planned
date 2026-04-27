@@ -25,6 +25,7 @@ import {
   AddRegular,
   DeleteRegular,
   SaveRegular,
+  ArrowCounterclockwiseRegular,
 } from '@fluentui/react-icons'
 import {
   updateDeliverableTemplate,
@@ -33,7 +34,7 @@ import {
   addEvidenceRequirement,
   deleteEvidenceRequirement,
 } from '@/lib/actions/templates'
-import type { DeliverableTemplate, ProjectPhase } from '@/types/templates'
+import type { DeliverableTemplate } from '@/types/templates'
 
 const useStyles = makeStyles({
   body: {
@@ -90,7 +91,7 @@ const useStyles = makeStyles({
   },
 })
 
-const PHASE_OPTIONS: { value: ProjectPhase; label: string }[] = [
+const PHASE_OPTIONS: { value: string; label: string }[] = [
   { value: 'pre_commissioning', label: 'Pre-Commissioning' },
   { value: 'commissioning', label: 'Commissioning' },
   { value: 'ramp_up', label: 'Ramp-Up' },
@@ -100,11 +101,13 @@ const PHASE_OPTIONS: { value: ProjectPhase; label: string }[] = [
 interface Props {
   deliverable: DeliverableTemplate
   templateId: string
+  subSectionCode?: string
+  deliverableCount?: number
   open: boolean
   onClose: () => void
 }
 
-export function DeliverableTemplateDrawer({ deliverable, templateId, open, onClose }: Props) {
+export function DeliverableTemplateDrawer({ deliverable, templateId, subSectionCode, deliverableCount, open, onClose }: Props) {
   const styles = useStyles()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -141,6 +144,7 @@ export function DeliverableTemplateDrawer({ deliverable, templateId, open, onClo
         code: code.trim(),
         name: name.trim(),
         description: description || undefined,
+        phase: phase.trim() || null,
         domain: domain || undefined,
         estimatedDuration: estimatedDuration ? Number(estimatedDuration) : undefined,
       })
@@ -232,8 +236,19 @@ export function DeliverableTemplateDrawer({ deliverable, templateId, open, onClo
         <div className={styles.body}>
           {/* Core fields */}
           <div className={styles.fieldsGrid}>
-            <Field label="Code" required>
-              <Input value={code} onChange={(_, d) => setCode(d.value)} />
+            <Field label="Code" required hint={subSectionCode ? 'Auto-generated from section — editable' : undefined}>
+              <div style={{ display: 'flex', gap: tokens.spacingHorizontalXS }}>
+                <Input value={code} onChange={(_, d) => setCode(d.value)} style={{ flex: 1 }} />
+                {subSectionCode && (
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<ArrowCounterclockwiseRegular />}
+                    title={`Generate code from section (${subSectionCode})`}
+                    onClick={() => setCode(`${subSectionCode}-${String((deliverableCount ?? 0) + 1).padStart(3, '0')}`)}
+                  />
+                )}
+              </div>
             </Field>
             <Field label="Phase">
               <Select value={phase} onChange={(_, d) => setPhase(d.value)}>

@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import ExcelJS from 'exceljs'
-import type { ProjectPhase } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { withTenant } from '@/lib/tenant-context'
 import { requireAuth } from '@/lib/security'
@@ -52,7 +51,6 @@ const TEMPLATE_IMPORT_HEADERS = {
   evidenceRequirements: 'Evidence Requirements',
 } as const
 
-const PROJECT_PHASES = new Set<ProjectPhase>(['pre_commissioning', 'commissioning', 'ramp_up', 'handover'])
 
 function asText(value: unknown): string {
   if (value instanceof Date) return value.toISOString()
@@ -142,7 +140,7 @@ function parseTemplateRows(workbook: ExcelJS.Workbook) {
         code: string
         name: string
         description?: string
-        phase?: ProjectPhase
+        phase?: string
         domain?: string
         estimatedDuration?: number
         acceptanceCriteria: Array<{ description: string; verificationMethod?: string }>
@@ -164,10 +162,7 @@ function parseTemplateRows(workbook: ExcelJS.Workbook) {
       throw new Error(`Deliverables row ${rowNumber} is missing a required code or name.`)
     }
 
-    const phaseText = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.phase) as ProjectPhase
-    if (phaseText && !PROJECT_PHASES.has(phaseText)) {
-      throw new Error(`Deliverables row ${rowNumber} has an invalid Phase value.`)
-    }
+    const phaseText = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.phase)
 
     const durationText = getCellText(row, headers, TEMPLATE_IMPORT_HEADERS.estimatedDuration)
     const estimatedDuration = durationText ? Number(durationText) : undefined
@@ -606,6 +601,7 @@ export async function updateDeliverableTemplate(
     code: string
     name: string
     description: string
+    phase: string | null
     domain: string
     estimatedDuration: number
   }>,

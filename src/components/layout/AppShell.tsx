@@ -2,6 +2,7 @@ import type { Session } from 'next-auth'
 import { SidebarProvider } from './SidebarContext'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
+import { OrgBanner } from './OrgBanner'
 
 interface AppShellProps {
   session: Session
@@ -23,6 +24,7 @@ export function AppShell({ session, orgName, orgSlug, orgLogoUrl, children }: Ap
           avatarUrl={session.user.avatarUrl}
         />
         <div className="sp-app-content">
+          <OrgBanner orgName={orgName} orgLogoUrl={orgLogoUrl} role={session.role} />
           {children}
         </div>
         <BottomNav />

@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ProjectTabs } from './_components/ProjectTabs'
 import { ProjectActions } from './_components/ProjectActions'
 import type { FocusAreaStat, PhaseCounts, RAIDSummary } from './_components/ProjectOverview'
-import type { ProjectPhase, RAIDSeverity } from '@prisma/client'
+import type { RAIDSeverity } from '@prisma/client'
 import type { RAIDItemWithCount } from './raid/_components/RAIDLogView'
 import { projectAccessWhere } from '@/lib/project-access'
 import { getProjectNotificationSuggestions } from '@/lib/actions/project-notifications'
@@ -38,7 +38,24 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   const project = await prisma.project.findFirst({
     where: { ...projectWhere, id: params.id },
     include: {
-      template: { select: { name: true } },
+      template: {
+        include: {
+          focusAreas: {
+            orderBy: { order: 'asc' },
+            include: {
+              subSections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  deliverables: {
+                    orderBy: { code: 'asc' },
+                    select: { phase: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       notificationSettings: true,
       focusAreaExecutions: {
         orderBy: { order: 'asc' },
@@ -88,15 +105,15 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
     return { name: fa.name, code: fa.code, total, closed, pct }
   })
 
-  const PHASES: ProjectPhase[] = ['pre_commissioning', 'commissioning', 'ramp_up', 'handover']
-  const byPhase: PhaseCounts = {
-    pre_commissioning: 0,
-    commissioning: 0,
-    ramp_up: 0,
-    handover: 0,
-  }
+  const templatePhases = project.template?.focusAreas.flatMap((fa) =>
+    fa.subSections.flatMap((ss) => ss.deliverables.map((d) => d.phase).filter(Boolean))
+  ) ?? []
+  const executionPhases = allDeliverables.map((d) => d.phase).filter(Boolean)
+  const phaseOptions = Array.from(new Set(templatePhases.length > 0 ? templatePhases : executionPhases)) as string[]
+  const byPhase: PhaseCounts = Object.fromEntries(phaseOptions.map((phase) => [phase, 0]))
   for (const d of allDeliverables) {
-    if (d.phase && PHASES.includes(d.phase)) {
+    if (d.phase) {
+      byPhase[d.phase] ??= 0
       byPhase[d.phase]++
     }
   }
@@ -144,7 +161,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
     closedCount: raidItems.filter((i) => i.status === 'closed').length,
   }
 
-  const [recentActivityRows, recentActivityTypes, decisionRows, notificationSuggestions, latestAISuggestion, aiRefreshStatus] = await Promise.all([
+  const [recentActivityRows, recentActivityTypes, decisionRows, people, notificationSuggestions, latestAISuggestion, aiRefreshStatus] = await Promise.all([
     prisma.auditEvent.findMany({
       where: { organizationId, projectId: params.id },
       orderBy: { createdAt: 'desc' },
@@ -164,6 +181,11 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
         id: true, description: true, impact: true, loggedDate: true,
         status: true, comments: true, loggedBy: true, createdAt: true,
       },
+    }),
+    prisma.person.findMany({
+      where: { organizationId },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, company: true, email: true },
     }),
     getProjectNotificationSuggestions(params.id),
     getLatestAISuggestion(params.id),
@@ -201,6 +223,8 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
         }}
         decisions={decisionRows}
         deliverablesProject={project}
+        phaseOptions={phaseOptions}
+        people={people}
         raid={{ items: raidItems, stats: raidStats }}
         overview={{
           projectId: params.id,

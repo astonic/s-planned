@@ -74,6 +74,12 @@ export default async function RAIDLogPage({ params }: Props) {
 
   const stats = { total, byType, bySeverity, openCount, closedCount }
 
+  const people = await prisma.person.findMany({
+    where: { organizationId },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, company: true, email: true },
+  })
+
   return (
     <>
       <PageHeader
@@ -88,6 +94,7 @@ export default async function RAIDLogPage({ params }: Props) {
         projectId={project.id}
         items={items}
         stats={stats}
+        people={people}
       />
     </>
   )

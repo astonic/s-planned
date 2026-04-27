@@ -22,7 +22,7 @@ import {
   createTableColumn,
   type TableColumnDefinition,
 } from '@fluentui/react-components'
-import type { ProjectStatus, ProjectPhase, RAIDType } from '@prisma/client'
+import type { ProjectStatus, RAIDType } from '@prisma/client'
 import { getProjectActivityPage } from '@/lib/actions/activity'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -35,12 +35,7 @@ export interface FocusAreaStat {
   pct: number
 }
 
-export interface PhaseCounts {
-  pre_commissioning: number
-  commissioning: number
-  ramp_up: number
-  handover: number
-}
+export type PhaseCounts = Record<string, number>
 
 export interface RAIDSummary {
   total: number
@@ -351,6 +346,8 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+    maxHeight: '480px',
+    overflowY: 'auto',
   },
   activityFilters: {
     display: 'flex',
@@ -433,11 +430,8 @@ function formatDate(date: Date | null): string {
   })
 }
 
-const PHASE_LABELS: Record<keyof PhaseCounts, string> = {
-  pre_commissioning: 'Pre-Commissioning',
-  commissioning: 'Commissioning',
-  ramp_up: 'Ramp-Up',
-  handover: 'Handover',
+function phaseLabel(phase: string): string {
+  return phase.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -680,11 +674,11 @@ export function ProjectOverview({
           Phase Breakdown
         </Text>
         <div className={styles.phaseGrid}>
-          {(Object.keys(PHASE_LABELS) as (keyof PhaseCounts)[]).map((phase) => (
+          {Object.entries(byPhase).map(([phase, count]) => (
             <Card key={phase}>
               <div className={styles.phaseCard}>
-                <Text className={styles.phaseLabel}>{PHASE_LABELS[phase]}</Text>
-                <Text className={styles.phaseCount}>{byPhase[phase]}</Text>
+                <Text className={styles.phaseLabel}>{phaseLabel(phase)}</Text>
+                <Text className={styles.phaseCount}>{count}</Text>
                 <Text className={styles.phaseSubtext}>deliverables</Text>
               </div>
             </Card>
@@ -821,27 +815,29 @@ export function ProjectOverview({
               {!activityPending && !activityError && !activityError && activityItems.length === 0 ? (
                 <Text className={styles.activityEmpty}>No activity matches the current filters.</Text>
               ) : (
-                <div className={styles.activityList}>
-                  {activityItems.map((event) => (
-                    <div key={event.id} className={styles.activityRow}>
-                      <div className={styles.activityMeta}>
-                        <Text size={200}>{event.actorName}</Text>
-                        <Text size={200}>
-                          {new Date(event.createdAt).toLocaleString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                <>
+                  <div className={styles.activityList}>
+                    {activityItems.map((event) => (
+                      <div key={event.id} className={styles.activityRow}>
+                        <div className={styles.activityMeta}>
+                          <Text size={200}>{event.actorName}</Text>
+                          <Text size={200}>
+                            {new Date(event.createdAt).toLocaleString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Text>
+                        </div>
+                        <Text weight="semibold">{event.description}</Text>
+                        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                          {event.eventType}
                         </Text>
                       </div>
-                      <Text weight="semibold">{event.description}</Text>
-                      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                        {event.eventType}
-                      </Text>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                   {activityHasMore && !activityPending && (
                     <div className={styles.activityLoadMore}>
                       <Button
@@ -856,7 +852,7 @@ export function ProjectOverview({
                       </Button>
                     </div>
                   )}
-                </div>
+                </>
               )}
             </>
           )}

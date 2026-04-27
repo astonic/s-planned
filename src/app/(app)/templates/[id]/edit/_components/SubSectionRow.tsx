@@ -186,6 +186,12 @@ export function SubSectionRow({ subSection, templateId }: Props) {
     })
   }
 
+  function handleShowAddDT() {
+    const nextNum = String(subSection.deliverables.length + 1).padStart(3, '0')
+    setNewDTCode(`${subSection.code}-${nextNum}`)
+    setShowAddDT(true)
+  }
+
   function handleAddDeliverable() {
     if (!newDTCode.trim() || !newDTName.trim()) return
     setAddDTError(null)
@@ -399,7 +405,7 @@ export function SubSectionRow({ subSection, templateId }: Props) {
                 appearance="subtle"
                 size="small"
                 icon={<AddRegular />}
-                onClick={() => setShowAddDT(true)}
+                onClick={handleShowAddDT}
               >
                 Add Deliverable
               </Button>
@@ -412,6 +418,8 @@ export function SubSectionRow({ subSection, templateId }: Props) {
         <DeliverableTemplateDrawer
           deliverable={selectedDeliverable}
           templateId={templateId}
+          subSectionCode={subSection.code}
+          deliverableCount={subSection.deliverables.length}
           open={true}
           onClose={() => setSelectedDeliverable(null)}
         />

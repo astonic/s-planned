@@ -54,14 +54,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only JPEG, PNG, WebP, or GIF allowed' }, { status: 415 })
   }
 
-  const storagePath = `logos/${orgId}/logo.${ext}`
+  const storagePath = `${orgId}/logos/logo.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
 
   try {
     // Delete old logos with other extensions to avoid stale files
     for (const otherExt of Object.values(ALLOWED_MIME_TYPES)) {
       if (otherExt !== ext) {
-        await storageService.delete(`logos/${orgId}/logo.${otherExt}`).catch(() => {/* ok */})
+        await storageService.delete(`${orgId}/logos/logo.${otherExt}`).catch(() => {/* ok */})
       }
     }
 
@@ -98,7 +98,7 @@ export async function DELETE(req: NextRequest) {
   const orgId = session.currentOrganizationId
 
   for (const ext of Object.values(ALLOWED_MIME_TYPES)) {
-    await storageService.delete(`logos/${orgId}/logo.${ext}`).catch(() => {/* ok */})
+    await storageService.delete(`${orgId}/logos/logo.${ext}`).catch(() => {/* ok */})
   }
 
   await prisma.organization.update({

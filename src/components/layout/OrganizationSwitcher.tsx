@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import {
   makeStyles, tokens, Spinner, Avatar, Text,
   Menu, MenuTrigger, MenuPopover, MenuList, MenuItem, MenuButton,
@@ -40,11 +40,14 @@ interface Props {
   currentOrgLogoUrl?: string | null
 }
 
-export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentOrgSlug, currentOrgLogoUrl }: Props) {
+export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentOrgSlug, currentOrgLogoUrl: _currentOrgLogoUrl }: Props) {
   const styles = useStyles()
-  const router = useRouter()
+  const { update } = useSession()
   const [orgs, setOrgs] = useState<UserOrganization[]>([])
   const [loading, startTransition] = useTransition()
+
+  const activeOrg = orgs.find((o) => o.isCurrentOrg)
+  const displayName = activeOrg?.name ?? currentOrgName
 
   useEffect(() => {
     startTransition(async () => {
@@ -58,7 +61,10 @@ export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentO
     startTransition(async () => {
       const res = await switchOrganization(orgId)
       if (res.ok) {
-        router.push(`/?org=${res.data.orgId}`)
+        await update({ currentOrganizationId: res.data.orgId })
+        // Hard reload so the browser sends the updated session cookie and all
+        // server components re-execute with the new org context
+        window.location.reload()
       }
     })
   }
@@ -68,7 +74,7 @@ export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentO
   if (orgs.length <= 1) {
     return (
       <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>
-        {currentOrgName}
+        {displayName}
       </Text>
     )
   }
@@ -83,7 +89,7 @@ export function OrganizationSwitcher({ currentOrgName, currentOrgSlug: _currentO
           className={styles.trigger}
           style={{ fontSize: '12px', padding: '2px 4px' }}
         >
-          {currentOrgName}
+          {displayName}
         </MenuButton>
       </MenuTrigger>
       <MenuPopover>

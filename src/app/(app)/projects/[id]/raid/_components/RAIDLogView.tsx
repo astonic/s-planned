@@ -30,6 +30,7 @@ import type { RAIDType, RAIDSeverity, RAIDStatus } from '@prisma/client'
 import type { RAIDItem } from '@prisma/client'
 import { deleteRAIDItem } from '@/lib/actions/raid'
 import { RAIDItemDialog } from './RAIDItemDialog'
+import type { RAIDOwnerOption } from './RAIDItemDialog'
 import { SpTabBar } from '@/components/ui/SpTabBar'
 import { SpGridToolbar } from '@/components/ui/SpGridToolbar'
 
@@ -353,10 +354,11 @@ interface Props {
   projectId: string
   items: RAIDItemWithCount[]
   stats: StatsProps
+  people: RAIDOwnerOption[]
   initialTypeFilter?: TypeFilter
 }
 
-export function RAIDLogView({ projectId, items, stats, initialTypeFilter = 'all' }: Props) {
+export function RAIDLogView({ projectId, items, stats, people, initialTypeFilter = 'all' }: Props) {
   const styles = useStyles()
 
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(initialTypeFilter)
@@ -563,6 +565,7 @@ export function RAIDLogView({ projectId, items, stats, initialTypeFilter = 'all'
       <RAIDItemDialog
         projectId={projectId}
         mode="create"
+        people={people}
         open={createOpen}
         onOpenChange={setCreateOpen}
       />
@@ -571,6 +574,7 @@ export function RAIDLogView({ projectId, items, stats, initialTypeFilter = 'all'
           projectId={projectId}
           mode="edit"
           item={editingItem}
+          people={people}
           open={!!editingItem}
           onOpenChange={(isOpen: boolean) => { if (!isOpen) setEditingItem(null) }}
         />

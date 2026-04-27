@@ -10,7 +10,7 @@ import {
   Select,
   Spinner,
 } from '@fluentui/react-components'
-import type { DeliverableExecution, DeliverableStatus, ProjectPhase } from '@prisma/client'
+import type { DeliverableExecution, DeliverableStatus } from '@prisma/client'
 import { updateDeliverableStatus } from '@/lib/actions/projects'
 
 const useStyles = makeStyles({
@@ -58,18 +58,28 @@ const useStyles = makeStyles({
   },
 })
 
-const PHASE_COLORS = {
+const PHASE_COLORS: Record<string, 'informative' | 'warning' | 'success' | 'severe'> = {
   pre_commissioning: 'informative',
   commissioning: 'warning',
   ramp_up: 'success',
   handover: 'severe',
-} as const satisfies Record<ProjectPhase, 'informative' | 'warning' | 'success' | 'severe'>
+}
 
-const PHASE_LABELS: Record<ProjectPhase, string> = {
+const PHASE_LABELS: Record<string, string> = {
   pre_commissioning: 'Pre-Comm',
   commissioning: 'Commissioning',
   ramp_up: 'Ramp Up',
   handover: 'Handover',
+}
+
+function phaseColor(phase: string | null): 'informative' | 'warning' | 'success' | 'severe' {
+  if (!phase) return 'informative'
+  return PHASE_COLORS[phase] ?? 'informative'
+}
+
+function phaseLabel(phase: string | null): string {
+  if (!phase) return ''
+  return PHASE_LABELS[phase] ?? phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 const STATUS_OPTIONS: { value: DeliverableStatus; label: string }[] = [
@@ -111,10 +121,10 @@ export function DeliverableRow({ deliverable, projectId }: Props) {
         <Badge
           className={styles.phaseBadge}
           appearance="tint"
-          color={PHASE_COLORS[deliverable.phase]}
+          color={phaseColor(deliverable.phase)}
           size="small"
         >
-          {PHASE_LABELS[deliverable.phase]}
+          {phaseLabel(deliverable.phase)}
         </Badge>
       )}
 

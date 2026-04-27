@@ -4,6 +4,8 @@ import type { NextAuthOptions } from 'next-auth'
 import { prisma } from './db'
 import { logger } from './logger'
 
+type UpdateSession = { currentOrganizationId?: string }
+
 export const authOptions: NextAuthOptions = {
   // CredentialsProvider requires JWT strategy — database strategy is not supported
   session: { strategy: 'jwt' },
@@ -64,7 +66,19 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === 'update') {
+        const update = session as UpdateSession | null
+        if (update?.currentOrganizationId && token.id) {
+          const membership = await prisma.organizationMembership.findFirst({
+            where: { organizationId: update.currentOrganizationId, userId: token.id as string },
+          })
+          if (membership) {
+            token.currentOrganizationId = update.currentOrganizationId
+            token.role = membership.role
+          }
+        }
+      }
       // On sign-in, persist org info into the JWT
       if (user) {
         token.id = user.id
