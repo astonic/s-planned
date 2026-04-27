@@ -110,7 +110,7 @@ export default function LandingPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28, animation: 'fadeIn 0.7s ease 0.3s both' }}>
-          {['No credit card required', 'SOC 2 ready', 'Deploy in minutes'].map(t => (
+          {['Evidence-ready handovers', 'SOC 2 ready', 'Go-live gate tracking'].map(t => (
             <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 'var(--sp-radius-pill)', backgroundColor: 'var(--sp-surface-subtle-alpha)', border: '0.5px solid var(--sp-border-subtle)', fontSize: 12, color: 'var(--sp-gray-600)', fontWeight: 700 }}>
               <CheckmarkRegular style={{ fontSize: 11, color: 'var(--sp-blue-500)' }} />{t}
             </span>
@@ -292,14 +292,14 @@ export default function LandingPage() {
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ fontSize: 34, fontWeight: 700, color: '#fff', marginBottom: 12 }}>Start your first readiness project today</div>
             <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 32, maxWidth: 480, margin: '0 auto 32px' }}>
-              Free to get started. No credit card required. Deploy in minutes.
+              Start with structured deliverables, evidence capture, RAID visibility, and stakeholder sign-off.
             </div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 28 }}>
               <Link href="/register"><Button size="large" style={{ backgroundColor: '#fff', color: 'var(--sp-blue-500)', fontWeight: 700, border: 'none', padding: '0 28px' }}>Get started free</Button></Link>
               <Link href="/use-cases"><Button size="large" appearance="transparent" icon={<ArrowRightRegular />} iconPosition="after" style={{ color: '#fff', border: '1.5px solid rgba(255,255,255,0.4)', padding: '0 28px' }}>See use cases</Button></Link>
             </div>
             <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {['No credit card', 'SOC 2 ready', 'GDPR compliant', 'Cancel anytime'].map(t => (
+              {['Evidence trails', 'SOC 2 ready', 'GDPR compliant', 'Stakeholder sign-off'].map(t => (
                 <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
                   <CheckmarkRegular style={{ fontSize: 13 }} />{t}
                 </span>

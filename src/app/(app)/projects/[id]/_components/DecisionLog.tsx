@@ -56,8 +56,7 @@ export interface DecisionLogProps {
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: tokens.spacingVerticalL },
-  description: { fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground1 },
-  meta: { fontSize: tokens.fontSizeBase200, color: tokens.colorNeutralForeground3, marginTop: '2px' },
+  decisionText: { fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground1 },
   toolbarWrapper: { padding: `0 ${tokens.spacingHorizontalL}` },
 })
 
@@ -244,16 +243,10 @@ export function DecisionLog({ projectId, initialDecisions }: DecisionLogProps) {
 
   const columns: TableColumnDefinition<DecisionItem>[] = [
     createTableColumn({
-      columnId: 'description',
+      columnId: 'decision',
       compare: (a, b) => a.description.localeCompare(b.description),
       renderHeaderCell: () => 'Decision',
-      renderCell: (d) => (
-        <div>
-          <Text className={styles.description} block>{d.description}</Text>
-          {d.impact && <Text className={styles.meta} block>Impact: {d.impact}</Text>}
-          {d.comments && <Text className={styles.meta} block>{d.comments}</Text>}
-        </div>
-      ),
+      renderCell: (d) => <Text className={styles.decisionText}>{d.description}</Text>,
     }),
     createTableColumn({
       columnId: 'status',
