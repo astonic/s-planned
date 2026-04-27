@@ -66,7 +66,7 @@ function Donut({ pct, closed, total }: { pct: number; closed: number; total: num
       <circle
         cx={cx} cy={cy} r={r}
         fill="none"
-        stroke="#5B0E91"
+        stroke="#0F6CBD"
         strokeWidth={14}
         strokeDasharray={circ}
         strokeDashoffset={offset}
@@ -139,7 +139,7 @@ export function ChartsView({ focusAreas }: { focusAreas: FocusAreaWithAll[] }) {
                   <Text size={100} style={{ color: tokens.colorNeutralForeground3, flexShrink: 0 }}>{fa.pct}% · {fa.closed}/{fa.total}</Text>
                 </div>
                 <div className={s.barTrack}>
-                  <div className={s.barFill} style={{ width: `${fa.pct}%`, backgroundColor: fa.pct === 100 ? '#107C10' : '#5B0E91' }} />
+                  <div className={s.barFill} style={{ width: `${fa.pct}%`, backgroundColor: fa.pct === 100 ? '#107C10' : '#0F6CBD' }} />
                 </div>
               </div>
             ))

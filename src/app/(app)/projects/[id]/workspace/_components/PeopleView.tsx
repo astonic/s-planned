@@ -47,7 +47,7 @@ const useStyles = makeStyles({
   personName: { fontWeight: tokens.fontWeightSemibold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   progressRow: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' },
   progressTrack: { flex: 1, height: '6px', backgroundColor: tokens.colorNeutralStroke2, borderRadius: '100px', overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: '100px', backgroundColor: '#5B0E91' },
+  progressFill: { height: '100%', borderRadius: '100px', backgroundColor: '#0F6CBD' },
   progressFillDone: { backgroundColor: '#107C10' },
   statusPips: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' },
   deliverableList: {
@@ -72,7 +72,7 @@ const useStyles = makeStyles({
 function StatusIcon({ status }: { status: DeliverableStatus }) {
   if (status === 'closed') return <CheckmarkCircleFilled style={{ color: '#6264A7', fontSize: 15, flexShrink: 0 }} />
   if (status === 'delayed') return <ErrorCircleFilled style={{ color: '#C4314B', fontSize: 15, flexShrink: 0 }} />
-  if (status === 'in_progress') return <RecordRegular style={{ color: '#5B0E91', fontSize: 15, flexShrink: 0 }} />
+  if (status === 'in_progress') return <RecordRegular style={{ color: '#0F6CBD', fontSize: 15, flexShrink: 0 }} />
   return <CircleRegular style={{ color: tokens.colorNeutralForeground3, fontSize: 15, flexShrink: 0 }} />
 }
 

@@ -62,7 +62,7 @@ const useStyles = makeStyles({
   numCell: { justifyContent: 'center', fontWeight: tokens.fontWeightSemibold },
   progressCell: { display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '16px' },
   progressTrack: { flex: 1, height: '8px', backgroundColor: tokens.colorNeutralStroke2, borderRadius: '100px', overflow: 'hidden', minWidth: '40px' },
-  progressFill: { height: '100%', borderRadius: '100px', backgroundColor: '#5B0E91' },
+  progressFill: { height: '100%', borderRadius: '100px', backgroundColor: '#0F6CBD' },
   progressFillDone: { backgroundColor: '#107C10' },
   progressLabel: { flexShrink: 0, width: '32px', textAlign: 'right', fontWeight: tokens.fontWeightSemibold, color: tokens.colorNeutralForeground2 },
   total: {

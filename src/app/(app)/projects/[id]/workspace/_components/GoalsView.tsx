@@ -47,7 +47,7 @@ const useStyles = makeStyles({
   ssName: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   ssProgress: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 },
   ssTrack: { width: '64px', height: '6px', backgroundColor: tokens.colorNeutralStroke2, borderRadius: '100px', overflow: 'hidden' },
-  ssFill: { height: '100%', borderRadius: '100px', backgroundColor: '#5B0E91' },
+  ssFill: { height: '100%', borderRadius: '100px', backgroundColor: '#0F6CBD' },
   ssFillDone: { backgroundColor: '#107C10' },
 })
 
@@ -57,7 +57,7 @@ function Ring({ pct, size = 72 }: { pct: number; size?: number }) {
   const cy = size / 2
   const circ = 2 * Math.PI * r
   const offset = circ * (1 - pct / 100)
-  const color = pct === 100 ? '#107C10' : '#5B0E91'
+  const color = pct === 100 ? '#107C10' : '#0F6CBD'
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`${pct}%`}>

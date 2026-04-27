@@ -47,7 +47,7 @@ export function pctForStatus(status: DeliverableStatus): number {
 
 export const STATUS_COLORS: Record<DeliverableStatus, string> = {
   planned: '#605E5C',
-  in_progress: '#5B0E91',
+  in_progress: '#0F6CBD',
   delayed: '#C4314B',
   closed: '#107C10',
 }
