@@ -338,15 +338,16 @@ export function RAIDItemDialog({ projectId, mode, item, open, onOpenChange }: Pr
         <DialogBody>
           <DialogTitle>{mode === 'create' ? 'Add RAID Item' : 'Edit RAID Item'}</DialogTitle>
 
-          {mode === 'edit' && (
-            <SpTabBar
-              tabs={tabs}
-              selectedValue={activeTab}
-              onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'deliverables')}
-            />
-          )}
-
           <DialogContent>
+            {mode === 'edit' && (
+              <div style={{ marginBottom: '12px' }}>
+                <SpTabBar
+                  tabs={tabs}
+                  selectedValue={activeTab}
+                  onTabSelect={(_, d) => setActiveTab(d.value as 'details' | 'deliverables')}
+                />
+              </div>
+            )}
             {activeTab === 'details' ? (
               <form id="raid-form" onSubmit={handleSubmit(onSubmit)}>
                 <div className={s.form}>
