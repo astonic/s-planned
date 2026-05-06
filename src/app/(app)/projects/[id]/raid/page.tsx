@@ -9,10 +9,11 @@ import type { RAIDItemWithCount } from './_components/RAIDLogView'
 import { projectAccessWhere } from '@/lib/project-access'
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function RAIDLogPage({ params }: Props) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
 
@@ -24,7 +25,7 @@ export default async function RAIDLogPage({ params }: Props) {
   })
 
   const project = await prisma.project.findFirst({
-    where: { ...projectWhere, id: params.id },
+    where: { ...projectWhere, id },
     select: { id: true, name: true, organizationId: true },
   })
 
@@ -32,7 +33,7 @@ export default async function RAIDLogPage({ params }: Props) {
 
   // Fetch all RAID items ordered: critical first, then by createdAt desc
   const rawItems = await prisma.rAIDItem.findMany({
-    where: { projectId: params.id, organizationId },
+    where: { projectId: id, organizationId },
     orderBy: [
       // We'll sort by severity weight then createdAt
       { createdAt: 'desc' },

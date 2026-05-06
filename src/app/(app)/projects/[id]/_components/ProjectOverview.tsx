@@ -251,13 +251,11 @@ const useStyles = makeStyles({
       transform: 'translateY(-1px)',
       boxShadow: tokens.shadow8,
     },
-    ':focusVisible': {
+    ':focus-visible': {
       outlineStyle: 'solid',
       outlineWidth: '2px',
       outlineColor: tokens.colorStrokeFocus2,
       outlineOffset: '2px',
-    },
-    ':focus-visible': {
       boxShadow: tokens.shadow8,
     },
   },

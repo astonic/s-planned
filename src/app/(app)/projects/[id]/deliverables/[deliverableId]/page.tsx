@@ -7,17 +7,18 @@ import { DeliverableDetail } from './_components/DeliverableDetail'
 import { canAccessProject } from '@/lib/project-access'
 
 interface Props {
-  params: { id: string; deliverableId: string }
+  params: Promise<{ id: string; deliverableId: string }>
 }
 
 export default async function DeliverableDetailPage({ params }: Props) {
+  const { deliverableId } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
 
   const orgId = session.currentOrganizationId
 
   const deliverable = await prisma.deliverableExecution.findUnique({
-    where: { id: params.deliverableId },
+    where: { id: deliverableId },
     include: {
       subSectionExecution: {
         include: {
@@ -64,7 +65,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
     noteRows,
   ] = await Promise.all([
     prisma.rAIDItemDeliverable.findMany({
-      where: { deliverableExecutionId: params.deliverableId },
+      where: { deliverableExecutionId: deliverableId },
       include: {
         raidItem: {
           select: { id: true, type: true, title: true, severity: true, status: true },
@@ -86,7 +87,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
     prisma.auditEvent.findMany({
       where: {
         organizationId: orgId,
-        deliverableExecutionId: params.deliverableId,
+        deliverableExecutionId: deliverableId,
       },
       orderBy: { createdAt: 'desc' },
       take: 21,
@@ -101,18 +102,18 @@ export default async function DeliverableDetailPage({ params }: Props) {
     prisma.auditEvent.findMany({
       where: {
         organizationId: orgId,
-        deliverableExecutionId: params.deliverableId,
+        deliverableExecutionId: deliverableId,
       },
       distinct: ['eventType'],
       select: { eventType: true },
       orderBy: { eventType: 'asc' },
     }),
     prisma.evidence.findMany({
-      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+      where: { deliverableExecutionId: deliverableId, organizationId: orgId },
       orderBy: { uploadedAt: 'desc' },
     }),
     prisma.criteriaCompletion.findMany({
-      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+      where: { deliverableExecutionId: deliverableId, organizationId: orgId },
     }),
     prisma.acceptanceCriteria.findMany({
       where: {
@@ -133,7 +134,7 @@ export default async function DeliverableDetailPage({ params }: Props) {
       orderBy: { id: 'asc' },
     }),
     prisma.deliverableNote.findMany({
-      where: { deliverableExecutionId: params.deliverableId, organizationId: orgId },
+      where: { deliverableExecutionId: deliverableId, organizationId: orgId },
       orderBy: { createdAt: 'desc' },
       select: { id: true, text: true, authorName: true, createdAt: true },
     }),

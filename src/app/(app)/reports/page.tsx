@@ -11,13 +11,14 @@ const PAGE_SIZE = 25
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
+  const { page: pageParam } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
   const orgId = session.currentOrganizationId
 
-  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
   const [reports, total, projects] = await Promise.all([

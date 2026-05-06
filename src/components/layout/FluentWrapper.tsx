@@ -1,7 +1,7 @@
 'use client'
 
 import { SessionProvider } from 'next-auth/react'
-import { FluentProvider, Toaster } from '@fluentui/react-components'
+import { FluentProvider, SSRProvider, Toaster } from '@fluentui/react-components'
 import { ThemeProvider, useTheme } from '@/lib/theme-context'
 import { lightTheme, darkTheme } from '@/lib/theme'
 
@@ -19,7 +19,9 @@ export function FluentWrapper({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <ThemeProvider>
-        <FluentProviderBridge>{children}</FluentProviderBridge>
+        <SSRProvider>
+          <FluentProviderBridge>{children}</FluentProviderBridge>
+        </SSRProvider>
       </ThemeProvider>
     </SessionProvider>
   )

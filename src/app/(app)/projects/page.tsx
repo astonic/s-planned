@@ -13,8 +13,9 @@ const PAGE_SIZE = 20
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
+  const { page: pageParam } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
@@ -24,7 +25,7 @@ export default async function ProjectsPage({
     userId: session.user.id,
     role: session.role ?? 'viewer',
   })
-  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
   const [rawProjects, total] = await Promise.all([

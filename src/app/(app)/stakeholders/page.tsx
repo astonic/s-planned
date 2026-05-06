@@ -10,13 +10,14 @@ const PAGE_SIZE = 50
 export default async function StakeholdersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; tab?: string }
+  searchParams: Promise<{ page?: string; tab?: string }>
 }) {
+  const { page: pageParam } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
   const orgId = session.currentOrganizationId
-  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
   const [people, vendors] = await withTenant(orgId, async (tx) => {

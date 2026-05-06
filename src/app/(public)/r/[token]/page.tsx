@@ -5,12 +5,13 @@ import { logReportAccess } from '@/lib/actions/reports'
 import { PublicReportView } from './_components/PublicReportView'
 
 interface Props {
-  params: { token: string }
+  params: Promise<{ token: string }>
 }
 
 export default async function PublicReportPage({ params }: Props) {
+  const { token } = await params
   const report = await prisma.report.findUnique({
-    where: { shareToken: params.token },
+    where: { shareToken: token },
     include: {
       project: { select: { name: true } },
       sections: { orderBy: { sortOrder: 'asc' } },
@@ -20,7 +21,7 @@ export default async function PublicReportPage({ params }: Props) {
   if (!report || report.status !== 'published') notFound()
 
   // Log access (best-effort, don't block render)
-  const headersList = headers()
+  const headersList = await headers()
   const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? headersList.get('x-real-ip') ?? undefined
   const userAgent = headersList.get('user-agent') ?? undefined
 

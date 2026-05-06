@@ -7,10 +7,11 @@ import { TemplateEditor } from './_components/TemplateEditor'
 import type { TemplateWithHierarchy } from '@/types/templates'
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function TemplateEditPage({ params }: Props) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
@@ -18,7 +19,7 @@ export default async function TemplateEditPage({ params }: Props) {
 
   const template = await withTenant(orgId, async (tx) => {
     return tx.template.findUnique({
-      where: { id: params.id, organizationId: orgId },
+      where: { id, organizationId: orgId },
       include: {
         focusAreas: {
           orderBy: { order: 'asc' },

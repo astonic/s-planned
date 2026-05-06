@@ -6,16 +6,17 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { ReportEditor } from '../_components/ReportEditor'
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ReportDetailPage({ params }: Props) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
   const orgId = session.currentOrganizationId
 
   const report = await prisma.report.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       project: { select: { name: true } },
       sections: { orderBy: { sortOrder: 'asc' } },

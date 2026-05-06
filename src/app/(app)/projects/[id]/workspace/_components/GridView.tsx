@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   makeStyles,
+  mergeClasses,
   tokens,
   Avatar,
   Badge,
@@ -238,10 +239,10 @@ export function GridView({
     <div className={s.scroller}>
       <div className={s.grid} role="table" aria-label="Deliverables grid">
         <div className={s.headerRow} role="row">
-          <div className={`${s.hCell} ${s.numCell}`} role="columnheader">#</div>
+          <div className={mergeClasses(s.hCell, s.numCell)} role="columnheader">#</div>
           {(['name', 'owner', 'pct', 'priority'] as SortKey[]).map((key, i) => (
             <div key={key} className={s.hCell} role="columnheader">
-              <Button appearance="transparent" className={`${s.sortBtn} ${sortKey === key ? s.sortBtnActive : ''}`} onClick={() => toggleSort(key)}>
+              <Button appearance="transparent" className={mergeClasses(s.sortBtn, sortKey === key && s.sortBtnActive)} onClick={() => toggleSort(key)}>
                 {(['Name', 'Assigned to', '% complete', 'Priority'])[i]}{si(key)}
               </Button>
             </div>
@@ -251,7 +252,7 @@ export function GridView({
           </div>
           {(['start', 'finish'] as SortKey[]).map((key, i) => (
             <div key={key} className={s.hCell} role="columnheader">
-              <Button appearance="transparent" className={`${s.sortBtn} ${sortKey === key ? s.sortBtnActive : ''}`} onClick={() => toggleSort(key)}>
+              <Button appearance="transparent" className={mergeClasses(s.sortBtn, sortKey === key && s.sortBtnActive)} onClick={() => toggleSort(key)}>
                 {(['Start', 'Finish'])[i]}{si(key)}
               </Button>
             </div>
@@ -268,11 +269,11 @@ export function GridView({
               <div
                 key={`${row.kind}-${row.id}`}
                 role="row"
-                className={`${s.row} ${row.kind === 'focus' ? s.focusRow : row.kind === 'subsection' ? s.subsectionRow : s.deliverableRow}`}
+                className={mergeClasses(s.row, row.kind === 'focus' ? s.focusRow : row.kind === 'subsection' ? s.subsectionRow : s.deliverableRow)}
                 onClick={() => row.deliverableId && router.push(`/projects/${projectId}/deliverables/${row.deliverableId}`)}
               >
-                <div className={`${s.cell} ${s.numCell}`} role="cell">{row.number}</div>
-                <div className={`${s.cell} ${s.nameCell}`} role="cell" style={{ paddingLeft: 8 + row.depth * 20 }}>
+                <div className={mergeClasses(s.cell, s.numCell)} role="cell">{row.number}</div>
+                <div className={mergeClasses(s.cell, s.nameCell)} role="cell" style={{ paddingLeft: 8 + row.depth * 20 }}>
                   {isGroup ? (
                     <Button appearance="subtle" className={s.expandBtn}
                       icon={collapsed.has(row.id) ? <ChevronRightRegular /> : <ChevronDownRegular />}
@@ -282,27 +283,27 @@ export function GridView({
                     <span className={s.expandBtnSpacer} />
                   )}
                   <span className={s.statusIconWrap}><StatusIcon status={row.status} kind={row.kind} /></span>
-                  <Text className={`${s.nameText} ${row.status === 'closed' ? s.strikethrough : ''}`} weight={isGroup ? 'semibold' : 'regular'} size={200}>
+                  <Text className={mergeClasses(s.nameText, row.status === 'closed' && s.strikethrough)} weight={isGroup ? 'semibold' : 'regular'} size={200}>
                     {isGroup ? `${row.code} ${row.name}` : row.name}
                   </Text>
                   {isGroup && row.total !== undefined && (
                     <Text size={100} style={{ color: tokens.colorNeutralForeground3, flexShrink: 0 }}>{row.closed}/{row.total}</Text>
                   )}
                 </div>
-                <div className={`${s.cell} ${s.ownerCell}`} role="cell">
+                <div className={mergeClasses(s.cell, s.ownerCell)} role="cell">
                   {row.ownerName ? (
                     <><Avatar name={row.ownerName} size={24} /><Text className={s.ownerName} size={200}>{row.ownerName}</Text></>
                   ) : (
                     <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
                   )}
                 </div>
-                <div className={`${s.cell} ${s.progressCell}`} role="cell">
+                <div className={mergeClasses(s.cell, s.progressCell)} role="cell">
                   <div className={s.progressTrack}>
-                    <div className={`${s.progressFill} ${row.pct === 100 ? s.progressFillComplete : ''}`} style={{ width: `${row.pct}%` }} />
+                    <div className={mergeClasses(s.progressFill, row.pct === 100 && s.progressFillComplete)} style={{ width: `${row.pct}%` }} />
                   </div>
                   <Text className={s.progressLabel} size={200}>{row.pct}%</Text>
                 </div>
-                <div className={`${s.cell} ${s.priorityCell}`} role="cell">
+                <div className={mergeClasses(s.cell, s.priorityCell)} role="cell">
                   {row.priority === 'Important' ? <span className={s.pipImportant}>!</span> : row.priority === 'Low' ? <span className={s.pipLow}>↓</span> : <span className={s.pipMedium} />}
                   {row.priorityLabel
                     ? <Text size={200}>{row.priorityLabel}</Text>
@@ -316,10 +317,10 @@ export function GridView({
                     <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>—</Text>
                   )}
                 </div>
-                <div className={row.startDate ? s.startCell : `${s.cell} ${s.finishCell}`} role="cell">
+                <div className={row.startDate ? s.startCell : mergeClasses(s.cell, s.finishCell)} role="cell">
                   <Text size={200}>{fmt(row.startDate)}</Text>
                 </div>
-                <div className={`${s.finishCell} ${isOverdue ? s.finishOverdue : ''}`} role="cell">
+                <div className={mergeClasses(s.finishCell, isOverdue && s.finishOverdue)} role="cell">
                   <Text size={200}>{fmt(row.finishDate)}</Text>
                 </div>
               </div>

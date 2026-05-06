@@ -15,7 +15,7 @@ export interface StorageService {
 
 // ── Local Disk Adapter ────────────────────────────────────────────────────────
 
-const STORAGE_ROOT = process.env.STORAGE_PATH ?? path.join(process.cwd(), 'uploads')
+const STORAGE_ROOT = process.env.STORAGE_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), 'uploads')
 
 export class LocalStorageAdapter implements StorageService {
   async upload(buffer: Buffer, storagePath: string): Promise<UploadResult> {

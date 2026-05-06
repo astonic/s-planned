@@ -33,7 +33,7 @@ function getPreferredTheme(): ThemeMode {
 const ThemeContext = createContext<ThemeContextValue>({ mode: 'light', setMode: () => {}, toggle: () => {} })
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setThemeMode] = useState<ThemeMode>(getPreferredTheme)
+  const [mode, setThemeMode] = useState<ThemeMode>('light')
 
   function setMode(next: ThemeMode) {
     localStorage.setItem(STORAGE_KEY, next)

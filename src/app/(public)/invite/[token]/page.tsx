@@ -5,12 +5,13 @@ import { prisma } from '@/lib/db'
 import { InviteAcceptanceClient } from './_components/InviteAcceptanceClient'
 
 interface Props {
-  params: { token: string }
+  params: Promise<{ token: string }>
 }
 
 export default async function InviteAcceptancePage({ params }: Props) {
+  const { token } = await params
   const invite = await prisma.invite.findUnique({
-    where: { token: params.token },
+    where: { token },
     include: { organization: true },
   })
 

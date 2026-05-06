@@ -17,7 +17,7 @@ const PUBLIC_PREFIXES = [
 // Only redirect to these paths after login — everything else falls back to /
 const VALID_CALLBACK_PREFIXES = ['/', '/projects', '/templates', '/stakeholders', '/analytics', '/reports', '/settings']
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   const isPublic = PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))

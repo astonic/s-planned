@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { makeStyles, tokens, Button, Input, Text } from '@fluentui/react-components'
+import { makeStyles, mergeClasses, tokens, Button, Input, Text } from '@fluentui/react-components'
 import {
   BoardRegular,
   CalendarLtrRegular,
@@ -94,7 +94,7 @@ export function WorkspaceView({ project, phaseOptions }: { project: ProjectWorks
             key={t.key}
             appearance="subtle"
             icon={t.icon}
-            className={`${s.viewBtn} ${tab === t.key ? s.viewBtnActive : ''}`}
+            className={mergeClasses(s.viewBtn, tab === t.key && s.viewBtnActive)}
             onClick={() => setTab(t.key)}
           >
             {t.label}

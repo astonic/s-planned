@@ -13,8 +13,8 @@ import { getProjectNotificationSuggestions } from '@/lib/actions/project-notific
 import { getLatestAISuggestion, getAIRefreshStatus } from '@/lib/actions/ai-suggestions'
 
 interface Props {
-  params: { id: string }
-  searchParams?: { tab?: string }
+  params: Promise<{ id: string }>
+  searchParams?: Promise<{ tab?: string }>
 }
 
 type ProjectTab = 'overview' | 'deliverables' | 'decisions' | 'raid' | 'notifications' | 'ai'
@@ -25,6 +25,7 @@ function getInitialTab(value: string | undefined): ProjectTab {
 }
 
 export default async function ProjectDetailPage({ params, searchParams }: Props) {
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
 
@@ -36,7 +37,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
   })
 
   const project = await prisma.project.findFirst({
-    where: { ...projectWhere, id: params.id },
+    where: { ...projectWhere, id },
     include: {
       template: {
         include: {
@@ -120,7 +121,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
 
   // ── RAID summary ─────────────────────────────────────────────────────────────
   const rawRaidItems = await prisma.rAIDItem.findMany({
-    where: { projectId: params.id, organizationId },
+    where: { projectId: id, organizationId },
     orderBy: [{ createdAt: 'desc' }],
     include: {
       _count: { select: { deliverables: true } },
@@ -163,19 +164,19 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
 
   const [recentActivityRows, recentActivityTypes, decisionRows, people, notificationSuggestions, latestAISuggestion, aiRefreshStatus] = await Promise.all([
     prisma.auditEvent.findMany({
-      where: { organizationId, projectId: params.id },
+      where: { organizationId, projectId: id },
       orderBy: { createdAt: 'desc' },
       take: 11,
       select: { id: true, actorName: true, eventType: true, description: true, createdAt: true },
     }),
     prisma.auditEvent.findMany({
-      where: { organizationId, projectId: params.id },
+      where: { organizationId, projectId: id },
       distinct: ['eventType'],
       select: { eventType: true },
       orderBy: { eventType: 'asc' },
     }),
     prisma.decision.findMany({
-      where: { projectId: params.id, organizationId },
+      where: { projectId: id, organizationId },
       orderBy: { loggedDate: 'desc' },
       select: {
         id: true, description: true, impact: true, loggedDate: true,
@@ -187,9 +188,9 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
       orderBy: { name: 'asc' },
       select: { id: true, name: true, company: true, email: true },
     }),
-    getProjectNotificationSuggestions(params.id),
-    getLatestAISuggestion(params.id),
-    getAIRefreshStatus(params.id),
+    getProjectNotificationSuggestions(id),
+    getLatestAISuggestion(id),
+    getAIRefreshStatus(id),
   ])
 
   const recentActivity = recentActivityRows.slice(0, 10)
@@ -203,11 +204,11 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
           { label: 'Projects', href: '/projects' },
           { label: project.name },
         ]}
-        actions={<ProjectActions projectId={params.id} />}
+        actions={<ProjectActions projectId={id} />}
       />
       <ProjectTabs
-        projectId={params.id}
-        initialTab={getInitialTab(searchParams?.tab)}
+        projectId={id}
+        initialTab={getInitialTab(resolvedSearchParams?.tab)}
         notificationSettings={{
           notifyEmail: project.notificationSettings?.notifyEmail ?? true,
           notifyReminders: project.notificationSettings?.notifyReminders ?? true,
@@ -227,7 +228,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Props)
         people={people}
         raid={{ items: raidItems, stats: raidStats }}
         overview={{
-          projectId: params.id,
+          projectId: id,
           projectName: project.name,
           projectStatus: project.status,
           description: project.description,

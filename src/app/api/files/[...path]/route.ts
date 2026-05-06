@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import fs from 'fs/promises'
 import path from 'path'
 
-const STORAGE_ROOT = process.env.STORAGE_PATH ?? path.join(process.cwd(), 'uploads')
+const STORAGE_ROOT = process.env.STORAGE_PATH ?? path.join(/*turbopackIgnore: true*/ process.cwd(), 'uploads')
 
 const EXT_MIME: Record<string, string> = {
   '.pdf': 'application/pdf',
@@ -25,15 +25,16 @@ const INLINE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/web
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
+  const { path: pathSegments } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
   const orgId = session.currentOrganizationId
-  const filePath = params.path.join('/')
+  const filePath = pathSegments.join('/')
 
   // Verify the file is scoped to the caller's org (first path segment = orgId)
   if (!filePath.startsWith(orgId + '/')) {

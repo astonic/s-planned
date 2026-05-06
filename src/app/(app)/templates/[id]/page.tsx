@@ -7,15 +7,16 @@ import { TemplateViewer } from './_components/TemplateViewer'
 import { TemplateActions } from './_components/TemplateActions'
 
 interface Props {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function TemplateDetailPage({ params }: Props) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) notFound()
 
   const template = await prisma.template.findFirst({
-    where: { id: params.id, organizationId: session.currentOrganizationId, isArchived: false },
+    where: { id, organizationId: session.currentOrganizationId, isArchived: false },
     include: {
       focusAreas: {
         orderBy: { order: 'asc' },

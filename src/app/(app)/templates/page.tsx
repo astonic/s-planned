@@ -13,13 +13,14 @@ const PAGE_SIZE = 24
 export default async function TemplatesPage({
   searchParams,
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
+  const { page: pageParam } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session?.currentOrganizationId) redirect('/login')
 
   const orgId = session.currentOrganizationId
-  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
   const skip = (page - 1) * PAGE_SIZE
 
   const [templates, total] = await Promise.all([

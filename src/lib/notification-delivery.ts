@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import nodemailer from 'nodemailer8'
 import type { OrganizationSettings, ProjectNotificationChannel } from '@prisma/client'
 
 type DeliveryInput = {
