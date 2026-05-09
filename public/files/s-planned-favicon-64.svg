@@ -1,25 +1,7 @@
 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned favicon 64px">
   <title>S-planned favicon 64px</title>
-  <defs>
-    <linearGradient id="g64" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3B82F6"/>
-      <stop offset="100%" stop-color="#1757C2"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g64)"/>
-  <!-- Back document layer -->
-  <rect x="18" y="10" width="30" height="38" rx="4" fill="#3B82F6" opacity="0.45"/>
-  <!-- Front document -->
-  <rect x="14" y="14" width="30" height="36" rx="4" fill="white"/>
-  <!-- Row 1 — checked -->
-  <rect x="18" y="22" width="8" height="8" rx="2" fill="#1757C2"/>
-  <path d="M19.5 26L21.2 27.7L24.5 24" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="28" y="24" width="11" height="2.5" rx="1.25" fill="#C7D8F5"/>
-  <!-- Row 2 — checked -->
-  <rect x="18" y="33" width="8" height="8" rx="2" fill="#1757C2"/>
-  <path d="M19.5 37L21.2 38.7L24.5 35" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="28" y="35" width="9" height="2.5" rx="1.25" fill="#C7D8F5"/>
-  <!-- Row 3 — unchecked -->
-  <rect x="18" y="44" width="8" height="4.5" rx="2" fill="none" stroke="#C7D8F5" stroke-width="1.1"/>
-  <rect x="28" y="45" width="11" height="2.5" rx="1.25" fill="#EEF1F8"/>
+  <defs><linearGradient id="tile" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#0B1628"/><stop offset="1" stop-color="#142C52"/></linearGradient><linearGradient id="ribbon" x1="16" y1="12" x2="48" y2="52"><stop offset="0" stop-color="#87CEEB"/><stop offset="0.52" stop-color="#4682B4"/><stop offset="1" stop-color="#191970"/></linearGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="url(#ribbon)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="#FFFFFF" stroke-opacity="0.78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button, Text, Badge } from '@fluentui/react-components'
+import { Button, Badge } from '@fluentui/react-components'
+import { BrandLockup } from '@/components/ui/BrandLockup'
 import {
   CheckmarkCircleRegular, ShieldRegular, DocumentRegular, PeopleRegular,
   DataBarVerticalRegular, ArrowRightRegular, BuildingRegular, ChartMultipleRegular,
@@ -67,92 +69,217 @@ const GUIDE_CARDS = [
   },
 ]
 
+const TASKS = [
+  { name: 'Fire suppression', short: 'Fire supp.', cat: 'Safety' },
+  { name: 'Emergency stops', short: 'Emerg. stops', cat: 'Safety' },
+  { name: 'Gas detection', short: 'Gas detect.', cat: 'Safety' },
+  { name: 'LOTO verified', short: 'LOTO verif.', cat: 'Operations' },
+  { name: 'Comms tested', short: 'Comms tested', cat: 'Operations' },
+  { name: 'Training signed off', short: 'Training s/o', cat: 'People' },
+  { name: 'Electrical cert', short: 'Electrical cert', cat: 'Compliance' },
+  { name: 'Pressure test', short: 'Pressure test', cat: 'Engineering', inProgress: true },
+  { name: 'Permits issued', short: 'Permits', cat: 'Compliance' },
+  { name: 'Handover doc', short: 'Handover doc', cat: 'Docs' },
+  { name: 'Stakeholder sign-off', short: 'Sign-off', cat: 'Governance' },
+]
+
+const CUBES = [
+  { t: '190,20 230,40 190,60 150,40', l: '150,40 150,76 190,96 190,60', r: '190,60 190,96 230,76 230,40', x: 190, y: 44 },
+  { t: '230,40 270,60 230,80 190,60', l: '190,60 190,96 230,116 230,80', r: '230,80 230,116 270,96 270,60', x: 230, y: 64 },
+  { t: '270,60 310,80 270,100 230,80', l: '230,80 230,116 270,136 270,100', r: '270,100 270,136 310,116 310,80', x: 270, y: 84 },
+  { t: '150,40 190,60 150,80 110,60', l: '110,60 110,96 150,116 150,80', r: '150,80 150,116 190,96 190,60', x: 150, y: 64 },
+  { t: '110,60 150,80 110,100 70,80', l: '70,80 70,116 110,136 110,100', r: '110,100 110,136 150,116 150,80', x: 110, y: 84 },
+  { t: '150,80 190,100 150,120 110,100', l: '110,100 110,136 150,156 150,120', r: '150,120 150,156 190,136 190,100', x: 150, y: 104 },
+  { t: '190,100 230,120 190,140 150,120', l: '150,120 150,156 190,176 190,140', r: '190,140 190,176 230,156 230,120', x: 190, y: 124 },
+  { t: '150,120 190,140 150,160 110,140', l: '110,140 110,176 150,196 150,160', r: '150,160 150,196 190,176 190,140', x: 150, y: 144 },
+  { t: '30,100 70,120 30,140 -10,120', l: '-10,120 -10,156 30,176 30,140', r: '30,140 30,176 70,156 70,120', x: 30, y: 124 },
+  { t: '70,120 110,140 70,160 30,140', l: '30,140 30,176 70,196 70,160', r: '70,160 70,196 110,176 110,140', x: 70, y: 144 },
+  { t: '110,140 150,160 110,180 70,160', l: '70,160 70,196 110,216 110,180', r: '110,180 110,216 150,196 150,160', x: 110, y: 164 },
+]
+
+type TrackerState = 'idle' | 'active' | 'done' | 'inprog'
+
+function ReadinessHeroAnimation() {
+  const [runKey, setRunKey] = useState(0)
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const [settledIndex, setSettledIndex] = useState(-1)
+  const [floating, setFloating] = useState(false)
+
+  useEffect(() => {
+    const timeouts: ReturnType<typeof setTimeout>[] = []
+    const step = 560
+
+    setActiveIndex(null)
+    setSettledIndex(-1)
+    setFloating(false)
+
+    TASKS.forEach((_, index) => {
+      timeouts.push(setTimeout(() => {
+        setActiveIndex(index)
+        setSettledIndex(index - 1)
+      }, 260 + index * step))
+
+      timeouts.push(setTimeout(() => {
+        setActiveIndex(null)
+        setSettledIndex(index)
+      }, 610 + index * step))
+    })
+
+    timeouts.push(setTimeout(() => {
+      setFloating(true)
+    }, 610 + TASKS.length * step))
+
+    timeouts.push(setTimeout(() => {
+      setRunKey((value) => value + 1)
+    }, 3600 + TASKS.length * step))
+
+    return () => timeouts.forEach(clearTimeout)
+  }, [runKey])
+
+  const states = useMemo<TrackerState[]>(() => (
+    TASKS.map((task, index) => {
+      if (index === activeIndex) return 'active'
+      if (index <= settledIndex) return task.inProgress ? 'inprog' : 'done'
+      return 'idle'
+    })
+  ), [activeIndex, settledIndex])
+
+  const doneCount = TASKS.reduce((count, task, index) => (
+    index <= settledIndex && !task.inProgress ? count + 1 : count
+  ), 0)
+  const pct = Math.round((doneCount / TASKS.length) * 100)
+
+  return (
+    <div className="landing-iso-hero">
+      <div className="landing-iso-layout">
+        <div className="landing-iso-stage">
+          <div className="landing-iso-label">Readiness tracker</div>
+          <svg
+            className={floating ? 'landing-iso-svg is-floating' : 'landing-iso-svg'}
+            width="310"
+            height="320"
+            viewBox="-16 0 340 320"
+            role="img"
+            aria-label="Animated isometric S-shaped readiness checklist"
+          >
+            <ellipse className="landing-iso-shadow" cx="150" cy="286" rx="140" ry="16" />
+            {CUBES.map((cube, index) => {
+              const state = states[index]
+              const task = TASKS[index]
+
+              return (
+                <g
+                  key={task.name}
+                  className={`landing-iso-cube is-${state}`}
+                  style={{ animationDelay: `${80 + index * 95}ms` }}
+                >
+                  <polygon className="cube-top" points={cube.t} />
+                  <polygon className="cube-left" points={cube.l} />
+                  <polygon className="cube-right" points={cube.r} />
+                  <text className="cube-number" x={cube.x} y={cube.y} textAnchor="middle">{index + 1}</text>
+                  <text className="cube-label" x={cube.x} y={cube.y + 10} textAnchor="middle">{task.short}</text>
+                  <text className="cube-icon" x={cube.x} y={cube.y + 2} textAnchor="middle">{task.inProgress ? '...' : 'OK'}</text>
+                </g>
+              )
+            })}
+            <text className="landing-iso-progress-text" x="155" y="252" textAnchor="middle">
+              {doneCount} / {TASKS.length} complete
+            </text>
+          </svg>
+        </div>
+
+        <div className="landing-iso-panel" aria-label="Checklist items">
+          <div className="landing-iso-label landing-iso-label--left">Checklist items</div>
+          <div className="landing-task-list">
+            {TASKS.map((task, index) => {
+              const state = states[index]
+              const badge = state === 'done' ? 'Done' : state === 'inprog' ? 'Active' : state === 'active' ? '...' : '-'
+
+              return (
+                <div
+                  key={task.name}
+                  className={`landing-task-row is-${state}`}
+                  style={{ animationDelay: `${180 + index * 55}ms` }}
+                >
+                  <span className="landing-task-dot" />
+                  <span className="landing-task-name">{task.name}<span /></span>
+                  <span className="landing-task-cat">{task.cat}</span>
+                  <span className="landing-task-badge">{badge}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="landing-progress">
+            <div className="landing-progress-meta">
+              <span>{doneCount} / {TASKS.length} complete</span>
+              <strong>{pct}%</strong>
+            </div>
+            <div className="landing-progress-track">
+              <div className="landing-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+
+          <button className="landing-replay-button" type="button" onClick={() => setRunKey((value) => value + 1)}>
+            Replay
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   return (
     <div style={{ color: 'var(--sp-page-fg)', backgroundColor: 'var(--sp-page-bg)' }}>
 
       {/* ── Hero ── */}
-      <div style={{
-        background: 'var(--sp-grad-extended)',
-        padding: '80px 40px 64px', textAlign: 'center',
-      }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '5px 14px', borderRadius: 'var(--sp-radius-pill)',
-          backgroundColor: 'var(--sp-surface-raised)', border: '1px solid var(--sp-border-subtle)', marginBottom: 24,
-          boxShadow: 'var(--sp-shadow-1)',
-          animation: 'fadeIn 0.6s ease both',
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: 'var(--sp-radius-pill)', background: 'var(--sp-grad-primary)', display: 'inline-block' }} />
-          <span style={{ fontSize: 12, color: 'var(--sp-blue-500)', fontWeight: 700 }}>Now with AI-powered readiness scoring</span>
-        </div>
+      <section className="landing-hero">
+        <ReadinessHeroAnimation />
 
-        <h1 style={{
-          fontSize: 32, fontWeight: 800, lineHeight: 1.1,
-          color: '#FFFFFF', marginBottom: 20, maxWidth: 800, margin: '0 auto 20px',
-          animation: 'fadeUp 0.7s ease 0.05s both',
-        }}>
-          Plan. Track. Evidence.{' '}
-          <span>Operational Readiness, Simplified.</span>
-        </h1>
-
-        <p style={{
-          fontSize: 18, color: 'rgba(255,255,255,0.88)', maxWidth: 580, margin: '0 auto 36px',
-          lineHeight: 1.7, animation: 'fadeUp 0.7s ease 0.12s both',
-        }}>
-          S-Planned gives project teams in mining, construction, healthcare, and manufacturing
-          a structured, evidence-based system to prove readiness before go-live.
-        </p>
-
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeUp 0.7s ease 0.18s both' }}>
-          <Link href="/register"><Button appearance="primary" size="large" style={{ padding: '0 28px', fontWeight: 600 }}>Get started free</Button></Link>
-          <Link href="/use-cases"><Button appearance="secondary" size="large" icon={<ArrowRightRegular />} iconPosition="after" style={{ padding: '0 28px' }}>See use cases</Button></Link>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28, animation: 'fadeIn 0.7s ease 0.3s both' }}>
-          {['Evidence-ready handovers', 'SOC 2 ready', 'Go-live gate tracking'].map(t => (
-            <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 'var(--sp-radius-pill)', backgroundColor: 'var(--sp-surface-subtle-alpha)', border: '0.5px solid var(--sp-border-subtle)', fontSize: 12, color: 'var(--sp-gray-600)', fontWeight: 700 }}>
-              <CheckmarkRegular style={{ fontSize: 11, color: 'var(--sp-blue-500)' }} />{t}
-            </span>
-          ))}
-        </div>
-
-        {/* Hero image */}
-        <div style={{
-          marginTop: 52, borderRadius: 'var(--sp-radius-lg)', overflow: 'hidden',
-          boxShadow: 'var(--sp-shadow-4)', maxWidth: 880,
-          margin: '52px auto 0', position: 'relative', aspectRatio: '16/7',
-          animation: 'scaleIn 0.8s ease 0.2s both',
-        }}>
-          <Image
-            src="/landing-screens/workspace-board-light.png"
-            alt="S-Planned project workspace showing readiness deliverables, ownership, and progress"
-            fill
-            sizes="(max-width: 900px) 100vw, 880px"
-            priority
-            className="landing-theme-image landing-theme-image--light"
-          />
-          <Image
-            src="/landing-screens/workspace-board-dark.png"
-            alt="S-Planned project workspace showing readiness deliverables, ownership, and progress"
-            fill
-            sizes="(max-width: 900px) 100vw, 880px"
-            priority
-            className="landing-theme-image landing-theme-image--dark"
-          />
+        <div className="landing-hero-copy">
           <div style={{
-            position: 'absolute', bottom: 16, left: 16, backgroundColor: 'var(--sp-surface-raised-alpha)',
-            backdropFilter: 'blur(8px)', borderRadius: 'var(--sp-radius-md)', padding: '8px 14px',
-            display: 'flex', alignItems: 'center', gap: 8,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '5px 14px', borderRadius: 'var(--sp-radius-pill)',
+            backgroundColor: 'var(--sp-surface-raised)', border: '1px solid var(--sp-border-subtle)', marginBottom: 24,
+            boxShadow: 'var(--sp-shadow-1)',
+            animation: 'fadeIn 0.6s ease both',
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: 'var(--sp-radius-pill)', backgroundColor: 'var(--sp-success)', display: 'inline-block' }} />
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>Readiness workspace</div>
-              <div style={{ fontSize: 11, color: 'var(--sp-gray-600)' }}>Deliverables, evidence, RAID, and ownership in one view</div>
-            </div>
+            <span style={{ width: 7, height: 7, borderRadius: 'var(--sp-radius-pill)', background: 'var(--sp-grad-primary)', display: 'inline-block' }} />
+            <span style={{ fontSize: 12, color: 'var(--sp-blue-500)', fontWeight: 700 }}>Now with AI-powered readiness scoring</span>
+          </div>
+
+          <h1 style={{
+            fontSize: 32, fontWeight: 800, lineHeight: 1.1,
+            color: 'var(--sp-page-fg)', marginBottom: 20, maxWidth: 800, margin: '0 auto 20px',
+            animation: 'fadeUp 0.7s ease 0.05s both',
+          }}>
+            Plan. Track. Evidence.{' '}
+            <span>Operational Readiness, Simplified.</span>
+          </h1>
+
+          <p style={{
+            fontSize: 18, color: 'var(--sp-gray-600)', maxWidth: 580, margin: '0 auto 36px',
+            lineHeight: 1.7, animation: 'fadeUp 0.7s ease 0.12s both',
+          }}>
+            S-Planned gives project teams in mining, construction, healthcare, and manufacturing
+            a structured, evidence-based system to prove readiness before go-live.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', animation: 'fadeUp 0.7s ease 0.18s both' }}>
+            <Link href="/register"><Button appearance="primary" size="large" style={{ padding: '0 28px', fontWeight: 600 }}>Get started free</Button></Link>
+            <Link href="/use-cases"><Button appearance="secondary" size="large" icon={<ArrowRightRegular />} iconPosition="after" style={{ padding: '0 28px' }}>See use cases</Button></Link>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 28, animation: 'fadeIn 0.7s ease 0.3s both' }}>
+            {['Evidence-ready handovers', 'SOC 2 ready', 'Go-live gate tracking'].map(t => (
+              <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 'var(--sp-radius-pill)', backgroundColor: 'var(--sp-surface-subtle-alpha)', border: '0.5px solid var(--sp-border-subtle)', fontSize: 12, color: 'var(--sp-gray-600)', fontWeight: 700 }}>
+                <CheckmarkRegular style={{ fontSize: 11, color: 'var(--sp-blue-500)' }} />{t}
+              </span>
+            ))}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* ── Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: '1px', backgroundColor: 'var(--sp-gray-200)' }}>
@@ -324,7 +451,7 @@ export default function LandingPage() {
                 boxShadow: 'var(--sp-shadow-1)',
                 marginBottom: 12,
               }}>
-                <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} style={{ width: 142, height: 'auto', display: 'block' }} />
+                <BrandLockup markSize={40} />
               </div>
               <div style={{ fontSize: 13, color: 'var(--sp-footer-muted)', maxWidth: 260, lineHeight: 1.6 }}>
                 Operational readiness planning for project-intensive industries.

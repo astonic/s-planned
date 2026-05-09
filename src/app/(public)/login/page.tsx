@@ -4,7 +4,6 @@ import { Suspense, useState, useTransition } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   Card,
   Field,
@@ -21,6 +20,7 @@ import { EyeRegular, EyeOffRegular } from '@fluentui/react-icons'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { BrandLockup } from '@/components/ui/BrandLockup'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -110,7 +110,7 @@ function LoginForm() {
   return (
     <div className={styles.page}>
       <Link href="/landing" className={styles.logoChip} aria-label="S-Planned home">
-        <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority className={styles.logo} />
+        <BrandLockup markSize={48} priority />
       </Link>
 
       <Card className={styles.card}>

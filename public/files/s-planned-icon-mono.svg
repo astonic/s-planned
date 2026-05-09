@@ -1,26 +1,6 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned monochrome icon">
   <title>S-planned monochrome icon</title>
-  <desc>S-planned icon mark — single colour, white version for use on brand-coloured or dark backgrounds</desc>
-
-  <!-- Outer rounded square — transparent, use as overlay on coloured bg -->
-  <!-- Front document -->
-  <rect x="98" y="112" width="270" height="316" rx="28" fill="white" opacity="0.95"/>
-
-  <!-- Row 1 — checked checkbox -->
-  <rect x="128" y="172" width="62" height="62" rx="13" fill="#1757C2"/>
-  <path d="M140 203L156 219L190 183" fill="none" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="206" y="194" width="130" height="18" rx="9" fill="rgba(23,87,194,0.25)"/>
-
-  <!-- Row 2 — checked checkbox -->
-  <rect x="128" y="254" width="62" height="62" rx="13" fill="#1757C2"/>
-  <path d="M140 285L156 301L190 265" fill="none" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="206" y="276" width="106" height="18" rx="9" fill="rgba(23,87,194,0.25)"/>
-
-  <!-- Row 3 — unchecked -->
-  <rect x="128" y="336" width="62" height="50" rx="13" fill="none" stroke="rgba(23,87,194,0.35)" stroke-width="8"/>
-  <rect x="206" y="352" width="130" height="18" rx="9" fill="rgba(23,87,194,0.15)"/>
-
-  <!-- Progress bar -->
-  <rect x="128" y="402" width="206" height="22" rx="11" fill="rgba(23,87,194,0.15)"/>
-  <rect x="128" y="402" width="138" height="22" rx="11" fill="#1757C2"/>
+  <desc>S-planned single-color S mark</desc>
+  <path d="M382 138H227C175 138 141 165 141 205C141 247 176 268 232 268H280C336 268 371 289 371 331C371 371 337 398 285 398H130" fill="none" stroke="#FFFFFF" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M382 138H227C175 138 141 165 141 205C141 247 176 268 232 268H280C336 268 371 289 371 331C371 371 337 398 285 398H130" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

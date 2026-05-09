@@ -1,18 +1,7 @@
-<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned favicon 16px">
+<svg width="16" height="16" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned favicon 16px">
   <title>S-planned favicon 16px</title>
-  <defs>
-    <linearGradient id="g16" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3B82F6"/>
-      <stop offset="100%" stop-color="#1757C2"/>
-    </linearGradient>
-  </defs>
-  <rect width="16" height="16" rx="3.5" fill="url(#g16)"/>
-  <!-- Document -->
-  <rect x="4" y="3" width="8" height="10" rx="1.5" fill="white"/>
-  <!-- Row 1 — checked (filled square at this size) -->
-  <rect x="5.5" y="5.5" width="2.5" height="2.5" rx="0.6" fill="#1757C2"/>
-  <rect x="9" y="6.3" width="2" height="1" rx="0.5" fill="#C7D8F5"/>
-  <!-- Row 2 — checked -->
-  <rect x="5.5" y="9" width="2.5" height="2.5" rx="0.6" fill="#1757C2"/>
-  <rect x="9" y="9.8" width="1.6" height="1" rx="0.5" fill="#C7D8F5"/>
+  <defs><linearGradient id="tile" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#0B1628"/><stop offset="1" stop-color="#142C52"/></linearGradient><linearGradient id="ribbon" x1="16" y1="12" x2="48" y2="52"><stop offset="0" stop-color="#87CEEB"/><stop offset="0.52" stop-color="#4682B4"/><stop offset="1" stop-color="#191970"/></linearGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="url(#ribbon)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="#FFFFFF" stroke-opacity="0.78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

@@ -16,6 +16,7 @@ import {
 } from '@fluentui/react-icons'
 import { useSidebar } from './SidebarContext'
 import { OrganizationSwitcher } from './OrganizationSwitcher'
+import { BrandLockup } from '@/components/ui/BrandLockup'
 
 const useStyles = makeStyles({
   sidebar: {
@@ -55,7 +56,7 @@ const useStyles = makeStyles({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 'var(--sp-radius-md)',
-    padding: '4px 8px',
+    padding: '5px 9px',
     boxShadow: '0 8px 24px rgba(23,87,194,0.18), 0 4px 8px rgba(23,87,194,0.10)',
     flexShrink: 0,
   },
@@ -217,7 +218,7 @@ export function Sidebar({ userName, orgName, orgSlug, orgLogoUrl, avatarUrl }: S
       <div className={styles.logo}>
         {showExpandedLabels ? (
           <Link href="/" className={styles.logoImageChip} aria-label="S-Planned dashboard">
-            <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority style={{ width: 144, height: 'auto', display: 'block' }} />
+            <BrandLockup markSize={38} priority />
           </Link>
         ) : (
           <Link href="/" className={styles.logoIconChip} aria-label="S-Planned dashboard">

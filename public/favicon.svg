@@ -1,12 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="7" fill="url(#grad)"/>
+<svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned favicon">
+  <title>S-planned favicon</title>
   <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#1474CB"/>
-      <stop offset="100%" stop-color="#0D2A4A"/>
+    <linearGradient id="tile" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1628"/>
+      <stop offset="1" stop-color="#142C52"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="16" y1="12" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#87CEEB"/>
+      <stop offset="0.52" stop-color="#4682B4"/>
+      <stop offset="1" stop-color="#191970"/>
     </linearGradient>
   </defs>
-  <!-- S letterform -->
-  <path d="M21 9.5H14a2.5 2.5 0 0 0-2.5 2.5v2.5a2.5 2.5 0 0 0 2.5 2.5h4a2.5 2.5 0 0 1 2.5 2.5V22a2.5 2.5 0 0 1-2.5 2.5H11"
-        stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="url(#ribbon)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47 17H29C22.8 17 18.8 20.4 18.8 25.2C18.8 30.3 23 32.6 29.7 32.6H38.3C45 32.6 49.2 34.9 49.2 40C49.2 44.8 45.2 48.2 39 48.2H18" fill="none" stroke="#FFFFFF" stroke-opacity="0.78" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

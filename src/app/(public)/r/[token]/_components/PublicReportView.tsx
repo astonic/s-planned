@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import {
   makeStyles,
   tokens,
@@ -9,6 +8,7 @@ import {
   Divider,
 } from '@fluentui/react-components'
 import { SectionRenderer } from '@/app/(app)/reports/_components/SectionRenderer'
+import { BrandLockup } from '@/components/ui/BrandLockup'
 import type { ReportType } from '@prisma/client'
 
 interface Section {
@@ -105,7 +105,7 @@ export function PublicReportView({ title, reportType, projectName, createdBy, pu
       {/* Top bar */}
       <div className={styles.topBar}>
         <div className={styles.brandLogo}>
-          <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority style={{ width: 140, height: 'auto', display: 'block' }} />
+          <BrandLockup markSize={40} priority />
         </div>
         <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Operational Readiness Report</Text>
       </div>

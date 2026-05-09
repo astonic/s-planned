@@ -1,0 +1,21 @@
+<svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned mark">
+  <title>S-planned mark</title>
+  <desc>Modern S monogram mark</desc>
+  <defs>
+    <linearGradient id="tile" x1="6" y1="8" x2="66" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1628"/>
+      <stop offset="1" stop-color="#142C52"/>
+    </linearGradient>
+    <linearGradient id="ribbon" x1="16" y1="18" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#87CEEB"/>
+      <stop offset="0.52" stop-color="#4682B4"/>
+      <stop offset="1" stop-color="#191970"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#4682B4" flood-opacity="0.26"/>
+    </filter>
+  </defs>
+  <rect x="6" y="8" width="60" height="56" rx="16" fill="url(#tile)"/>
+  <path d="M52 22H29C21.8 22 17 25.9 17 31.4C17 37.3 21.9 40 29.7 40H42.3C50.1 40 55 42.7 55 48.6C55 54.1 50.2 58 43 58H19" fill="none" stroke="url(#ribbon)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M52 22H29C21.8 22 17 25.9 17 31.4C17 37.3 21.9 40 29.7 40H42.3C50.1 40 55 42.7 55 48.6C55 54.1 50.2 58 43 58H19" fill="none" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

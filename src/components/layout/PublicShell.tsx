@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { FluentWrapper } from '@/components/layout/FluentWrapper'
+import { BrandLockup } from '@/components/ui/BrandLockup'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
@@ -27,11 +27,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
               textDecoration: 'none',
               backgroundColor: '#fff',
               borderRadius: 'var(--sp-radius-md)',
-              padding: '4px 8px',
+              padding: '4px 10px',
               boxShadow: 'var(--sp-shadow-1)',
             }}
           >
-            <Image src="/files/s-planned-logo-horizontal.svg" alt="S-Planned" width={320} height={72} priority style={{ width: 140, height: 'auto', display: 'block' }} />
+            <BrandLockup markSize={42} priority />
           </Link>
           <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
             <Link href="/use-cases" style={{ fontSize: 14, color: 'var(--sp-gray-600)', textDecoration: 'none', fontWeight: 700 }}>

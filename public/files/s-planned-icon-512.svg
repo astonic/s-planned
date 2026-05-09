@@ -1,48 +1,21 @@
-<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned icon mark">
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="S-planned icon">
   <title>S-planned icon</title>
-  <desc>S-planned icon mark — 512px master SVG for scaling to all favicon and app icon sizes</desc>
+  <desc>S-planned modern S app icon</desc>
   <defs>
-    <linearGradient id="grad-512" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3B82F6"/>
-      <stop offset="100%" stop-color="#1757C2"/>
+    <linearGradient id="tile" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0B1628"/>
+      <stop offset="1" stop-color="#142C52"/>
     </linearGradient>
-    <linearGradient id="grad-progress" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#60A5FA"/>
-      <stop offset="100%" stop-color="#3B82F6"/>
+    <linearGradient id="ribbon" x1="144" y1="112" x2="384" y2="408" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#87CEEB"/>
+      <stop offset="0.52" stop-color="#4682B4"/>
+      <stop offset="1" stop-color="#191970"/>
     </linearGradient>
-    <filter id="shadow-512" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#1757C2" flood-opacity="0.20"/>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#4682B4" flood-opacity="0.34"/>
     </filter>
   </defs>
-
-  <!-- Outer rounded square -->
-  <rect width="512" height="512" rx="112" fill="url(#grad-512)" filter="url(#shadow-512)"/>
-
-  <!-- Back document (depth layer) -->
-  <rect x="130" y="88" width="270" height="336" rx="28" fill="#3B82F6" opacity="0.42"/>
-
-  <!-- Front document -->
-  <rect x="98" y="112" width="270" height="316" rx="28" fill="white"/>
-
-  <!-- Row 1 — checked checkbox -->
-  <rect x="128" y="172" width="62" height="62" rx="13" fill="#1757C2"/>
-  <path d="M140 203L156 219L190 183" fill="none" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Row 1 line -->
-  <rect x="206" y="194" width="130" height="18" rx="9" fill="#C7D8F5"/>
-
-  <!-- Row 2 — checked checkbox -->
-  <rect x="128" y="254" width="62" height="62" rx="13" fill="#1757C2"/>
-  <path d="M140 285L156 301L190 265" fill="none" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Row 2 line -->
-  <rect x="206" y="276" width="106" height="18" rx="9" fill="#C7D8F5"/>
-
-  <!-- Row 3 — unchecked checkbox -->
-  <rect x="128" y="336" width="62" height="50" rx="13" fill="none" stroke="#C7D8F5" stroke-width="8"/>
-  <!-- Row 3 line -->
-  <rect x="206" y="352" width="130" height="18" rx="9" fill="#EEF1F8"/>
-
-  <!-- Progress bar track -->
-  <rect x="128" y="402" width="206" height="22" rx="11" fill="#EEF1F8"/>
-  <!-- Progress bar fill — ~67% -->
-  <rect x="128" y="402" width="138" height="22" rx="11" fill="url(#grad-progress)"/>
+  <rect width="512" height="512" rx="112" fill="url(#tile)"/>
+  <path d="M382 138H227C175 138 141 165 141 205C141 247 176 268 232 268H280C336 268 371 289 371 331C371 371 337 398 285 398H130" fill="none" stroke="url(#ribbon)" stroke-width="72" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M382 138H227C175 138 141 165 141 205C141 247 176 268 232 268H280C336 268 371 289 371 331C371 371 337 398 285 398H130" fill="none" stroke="#FFFFFF" stroke-opacity="0.76" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

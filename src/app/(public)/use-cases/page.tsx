@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button, Text, Card, Badge, makeStyles, tokens } from '@fluentui/react-components'
 
 const useStyles = makeStyles({
@@ -11,15 +12,32 @@ const useStyles = makeStyles({
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))',
     gap: tokens.spacingHorizontalXXL,
     marginTop: tokens.spacingVerticalXXL,
   },
   card: {
+    padding: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    height: '100%',
+  },
+  imageWrap: {
+    position: 'relative',
+    height: '188px',
+    width: '100%',
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
+  image: {
+    objectFit: 'cover',
+  },
+  cardBody: {
     padding: tokens.spacingHorizontalXXL,
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalM,
+    flex: 1,
   },
   activities: {
     display: 'flex',
@@ -48,6 +66,10 @@ const USE_CASES = [
       'Regulatory compliance packages',
       'Maintenance readiness verification',
     ],
+    image: {
+      src: 'https://images.unsplash.com/photo-1523848309072-c199db53f137?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Open-pit mine with excavators and haul trucks in operation',
+    },
   },
   {
     industry: 'Construction & Engineering',
@@ -60,6 +82,10 @@ const USE_CASES = [
       'Operations and maintenance manual collection',
       'Handover to building management',
     ],
+    image: {
+      src: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Construction team coordinating work on a major infrastructure project',
+    },
   },
   {
     industry: 'Healthcare',
@@ -72,6 +98,10 @@ const USE_CASES = [
       'IT systems go-live readiness',
       'Emergency preparedness sign-offs',
     ],
+    image: {
+      src: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Modern hospital room prepared for clinical operations',
+    },
   },
   {
     industry: 'Manufacturing',
@@ -84,6 +114,10 @@ const USE_CASES = [
       'Safety and environmental compliance',
       'Supply chain readiness verification',
     ],
+    image: {
+      src: 'https://images.unsplash.com/photo-1565793298595-6a879b1d9492?auto=format&fit=crop&w=1200&q=80',
+      alt: 'Factory production line equipment inside a manufacturing facility',
+    },
   },
 ]
 
@@ -100,21 +134,32 @@ export default function UseCasesPage() {
       </Text>
 
       <div className={styles.grid}>
-        {USE_CASES.map(({ industry, description, activities }) => (
+        {USE_CASES.map(({ industry, description, activities, image }) => (
           <Card key={industry} className={styles.card}>
-            <Text size={500} weight="semibold">{industry}</Text>
-            <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
-              {description}
-            </Text>
-            <Text size={200} weight="semibold" style={{ marginTop: '4px' }}>
-              Common activities:
-            </Text>
-            <div className={styles.activities}>
-              {activities.map((a) => (
-                <Badge key={a} appearance="outline" color="brand" size="medium">
-                  {a}
-                </Badge>
-              ))}
+            <div className={styles.imageWrap}>
+              <Image
+                src={image.src}
+                alt={image.alt}
+                fill
+                sizes="(max-width: 700px) 100vw, (max-width: 1200px) 50vw, 520px"
+                className={styles.image}
+              />
+            </div>
+            <div className={styles.cardBody}>
+              <Text size={500} weight="semibold">{industry}</Text>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground2 }}>
+                {description}
+              </Text>
+              <Text size={200} weight="semibold" style={{ marginTop: '4px' }}>
+                Common activities:
+              </Text>
+              <div className={styles.activities}>
+                {activities.map((a) => (
+                  <Badge key={a} appearance="outline" color="brand" size="medium">
+                    {a}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </Card>
         ))}
